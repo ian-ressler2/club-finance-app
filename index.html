@@ -3,35 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Club Financial Dashboard</title>
+  <title>Club Financial Hub</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Alpine.js for State Management -->
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
     [x-cloak] { display: none !important; }
+    /* Custom scrollbars for clean horizontal layout */
+    ::-webkit-scrollbar { height: 6px; width: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased" x-data="financeApp()" x-cloak>
 
-  <!-- TOP HEADER & CONTROLS -->
-  <header class="border-b border-slate-800/80 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50 px-6 py-4">
-    <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-extrabold tracking-tight text-white flex items-center gap-2">
+  <!-- TOP HEADER -->
+  <header class="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40 px-6 py-3">
+    <div class="max-w-[1700px] mx-auto flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
           <span>🛡️</span> Club Financial Hub
         </h1>
-        <p class="text-xs text-slate-400 mt-0.5">Executive balance tracking, projections, and member dues management.</p>
+        <span class="text-xs bg-slate-800 text-slate-400 px-2.5 py-1 rounded-full border border-slate-700/50 hidden sm:inline-block">Horizontal Executive View</span>
       </div>
 
-      <!-- BOARD-LEVEL ACCESS TOGGLE -->
-      <div class="flex items-center gap-3 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl self-start md:self-auto">
+      <!-- BOARD-LEVEL ACCESS WITH PASSWORD SECURITY -->
+      <div class="flex items-center gap-3 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl">
         <div class="flex items-center gap-2">
           <span class="w-2 h-2 rounded-full" :class="isAdmin ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'"></span>
-          <span class="text-xs font-semibold text-slate-300" x-text="isAdmin ? 'Board Admin Mode' : 'Read-Only Mode'"></span>
+          <span class="text-xs font-semibold text-slate-300" x-text="isAdmin ? 'Admin Mode (Active)' : 'Read-Only Mode'"></span>
         </div>
         <button 
-          @click="isAdmin = !isAdmin"
+          @click="toggleAdminPrompt()"
           class="relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none"
           :class="isAdmin ? 'bg-emerald-500' : 'bg-slate-700'"
         >
@@ -42,278 +47,279 @@
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto p-6 space-y-8">
+  <main class="max-w-[1700px] mx-auto p-6 space-y-6">
 
-    <!-- METRICS OVERVIEW CARDS -->
-    <section class="grid grid-cols-1 sm:grid-cols-3 gap-5">
-      <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 shadow-xl relative overflow-hidden">
-        <div class="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
-        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Current Vault Balance</p>
-        <p class="text-3xl font-black text-white mt-2" x-text="'$' + getCurrentBalance().toFixed(2)"></p>
-        <p class="text-[11px] text-emerald-400 mt-1 font-medium flex items-center gap-1">
-          <span>Starting Base:</span> $<span x-text="startingBalance"></span>
-        </p>
-      </div>
-
-      <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 shadow-xl relative overflow-hidden">
-        <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
-        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Incoming Deposits</p>
-        <p class="text-3xl font-black text-white mt-2" x-text="'$' + getTotalDeposits().toFixed(2)"></p>
-        <p class="text-[11px] text-slate-400 mt-1" x-text="transactions.filter(t => t.type === 'deposit').length + ' total entries'"></p>
-      </div>
-
-      <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 shadow-xl relative overflow-hidden">
-        <div class="absolute top-0 left-0 w-1 h-full bg-rose-500"></div>
-        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Outgoing Expenses</p>
-        <p class="text-3xl font-black text-white mt-2" x-text="'$' + getTotalExpenses().toFixed(2)"></p>
-        <p class="text-[11px] text-slate-400 mt-1" x-text="transactions.filter(t => t.type === 'expense').length + ' total entries'"></p>
-      </div>
-    </section>
-
-    <!-- PROJECTION GRAPH SECTION -->
-    <section class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 shadow-xl">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
-        <div>
-          <h2 class="text-lg font-bold text-white flex items-center gap-2">📈 Financial Projection & History</h2>
-          <p class="text-xs text-slate-400">Interactive balance trend based on recorded deposits and expenditures.</p>
-        </div>
-        <div class="text-xs bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-lg text-slate-400">
-          Current Projected Ending: <span class="font-bold text-emerald-400" x-text="'$' + getCurrentBalance().toFixed(2)"></span>
-        </div>
-      </div>
-
-      <!-- Interactive SVG Line Chart with Gradient Fill -->
-      <div class="relative bg-slate-950/80 border border-slate-800/90 rounded-xl p-4 overflow-hidden">
-        <svg viewBox="0 0 600 180" class="w-full h-48 overflow-visible">
-          <defs>
-            <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#10b981" stop-opacity="0.3"/>
-              <stop offset="100%" stop-color="#10b981" stop-opacity="0.0"/>
-            </linearGradient>
-          </defs>
-
-          <!-- Grid Lines -->
-          <line x1="0" y1="30" x2="600" y2="30" stroke="#1e293b" stroke-dasharray="4 4" />
-          <line x1="0" y1="90" x2="600" y2="90" stroke="#1e293b" stroke-dasharray="4 4" />
-          <line x1="0" y1="150" x2="600" y2="150" stroke="#1e293b" stroke-dasharray="4 4" />
-
-          <!-- Gradient Area -->
-          <path :d="generateGraphAreaPath()" fill="url(#chartGradient)" />
-
-          <!-- Balance Path Line -->
-          <path
-            :d="generateGraphPath()"
-            fill="none"
-            stroke="#10b981"
-            stroke-width="3"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            class="drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]"
-          />
-
-          <!-- Interactive Node Points -->
-          <template x-for="(pt, idx) in getGraphPoints()" :key="idx">
-            <g>
-              <circle
-                :cx="pt.x"
-                :cy="pt.y"
-                :r="hoveredPoint && hoveredPoint.index === idx ? 8 : 5"
-                class="fill-emerald-400 stroke-slate-950 stroke-2 cursor-pointer transition-all duration-150"
-                @mouseenter="hoveredPoint = { index: idx, ...pt.data }"
-                @mouseleave="hoveredPoint = null"
-              />
-            </g>
-          </template>
-        </svg>
-
-        <!-- Hover Tooltip -->
-        <div 
-          x-show="hoveredPoint" 
-          class="absolute top-4 right-4 bg-slate-900/95 border border-slate-700 px-4 py-2.5 rounded-xl shadow-2xl text-xs space-y-1 backdrop-blur-md"
-        >
-          <p class="font-bold text-emerald-400" x-text="hoveredPoint?.source + ' (' + hoveredPoint?.amount + ')'"></p>
-          <p class="text-slate-200">Resulting Balance: <span class="font-black text-white" x-text="'$' + hoveredPoint?.balance"></span></p>
-          <p class="text-[10px] text-slate-400" x-text="'Date: ' + hoveredPoint?.date"></p>
-        </div>
+    <!-- METRICS & GRAPH DASHBOARD ROW -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+      
+      <!-- LEFT: STAT CARDS & VAULT INITIALIZATION (4 cols) -->
+      <div class="lg:col-span-4 flex flex-col justify-between space-y-4">
         
-        <div x-show="!hoveredPoint" class="absolute top-4 right-4 text-[10px] text-slate-500 italic bg-slate-900/60 px-2.5 py-1 rounded-lg border border-slate-800">
-          Hover data points to inspect transactions
+        <!-- Base Starting Vault Input Card -->
+        <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-xl">
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Vault Starting Base</span>
+            <button x-show="isAdmin" @click="editingStarting = !editingStarting" class="text-[10px] text-emerald-400 hover:underline">
+              <span x-text="editingStarting ? 'Done' : 'Set Initial Vault'"></span>
+            </button>
+          </div>
+          <template x-if="!editingStarting">
+            <p class="text-2xl font-black text-white" x-text="'$' + Number(startingBalance).toFixed(2)"></p>
+          </template>
+          <template x-if="editingStarting && isAdmin">
+            <div class="flex items-center gap-2 mt-1">
+              <span class="text-slate-400 text-sm font-bold">$</span>
+              <input type="number" step="0.01" x-model.number="startingBalance" class="bg-slate-950 border border-slate-700 text-xs text-white px-2 py-1 rounded w-full focus:outline-none focus:border-emerald-500">
+            </div>
+          </template>
+        </div>
+
+        <!-- Metrics Grid -->
+        <div class="grid grid-cols-3 gap-3">
+          <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3 shadow-lg border-l-2 border-l-emerald-500">
+            <p class="text-[10px] font-bold uppercase text-slate-400">Current Vault</p>
+            <p class="text-lg font-black text-white mt-1" x-text="'$' + getCurrentBalance().toFixed(2)"></p>
+          </div>
+
+          <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3 shadow-lg border-l-2 border-l-blue-500">
+            <p class="text-[10px] font-bold uppercase text-slate-400">Total Cleared</p>
+            <p class="text-lg font-black text-white mt-1" x-text="'$' + getTotalClearedDeposits().toFixed(2)"></p>
+          </div>
+
+          <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3 shadow-lg border-l-2 border-l-amber-500">
+            <p class="text-[10px] font-bold uppercase text-slate-400">Projected Vault</p>
+            <p class="text-lg font-black text-amber-400 mt-1" x-text="'$' + getProjectedBalance().toFixed(2)"></p>
+          </div>
+        </div>
+
+        <!-- Action Control Bar -->
+        <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-xl flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-300">Quick Actions</span>
+          <div class="flex gap-2">
+            <button 
+              x-show="isAdmin" 
+              @click="showTxForm = !showTxForm" 
+              class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition"
+            >
+              + Add Transaction
+            </button>
+            <button 
+              x-show="isAdmin" 
+              @click="showMemberForm = !showMemberForm" 
+              class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition"
+            >
+              + Add Member
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: VISUAL PROJECTION GRAPH (8 cols) -->
+      <div class="lg:col-span-8 bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+        <div class="flex justify-between items-center mb-2">
+          <div>
+            <h2 class="text-base font-bold text-white flex items-center gap-2">📈 Balance & Projection Graph</h2>
+            <p class="text-[11px] text-slate-400">Solid line indicates cleared history. Dashed line projects future posted obligations.</p>
+          </div>
+          <div class="flex items-center gap-4 text-[10px]">
+            <span class="flex items-center gap-1 text-emerald-400"><span class="w-2.5 h-0.5 bg-emerald-400 inline-block"></span> Cleared History</span>
+            <span class="flex items-center gap-1 text-amber-400"><span class="w-2.5 h-0.5 border-b border-dashed border-amber-400 inline-block"></span> Upcoming Projection</span>
+          </div>
+        </div>
+
+        <!-- Dynamic Chart Area -->
+        <div class="relative bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 overflow-hidden">
+          <template x-if="timelineData.length === 0">
+            <div class="h-44 flex items-center justify-center text-xs text-slate-600 italic">
+              Graph will populate dynamically as you input transactions below.
+            </div>
+          </template>
+          
+          <template x-if="timelineData.length > 0">
+            <svg viewBox="0 0 700 170" class="w-full h-44 overflow-visible">
+              <defs>
+                <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#10b981" stop-opacity="0.25"/>
+                  <stop offset="100%" stop-color="#10b981" stop-opacity="0.0"/>
+                </linearGradient>
+              </defs>
+
+              <!-- Grid -->
+              <line x1="0" y1="30" x2="700" y2="30" stroke="#1e293b" stroke-dasharray="4 4" />
+              <line x1="0" y1="85" x2="700" y2="85" stroke="#1e293b" stroke-dasharray="4 4" />
+              <line x1="0" y1="140" x2="700" y2="140" stroke="#1e293b" stroke-dasharray="4 4" />
+
+              <!-- Gradient Area -->
+              <path :d="generateGraphAreaPath()" fill="url(#chartGradient)" />
+
+              <!-- Cleared Line -->
+              <path :d="generateGraphPath('cleared')" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+              
+              <!-- Projected Line -->
+              <path :d="generateGraphPath('projected')" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round" />
+
+              <!-- Point Nodes -->
+              <template x-for="(pt, idx) in getGraphPoints()" :key="idx">
+                <circle
+                  :cx="pt.x"
+                  :cy="pt.y"
+                  :r="hoveredPoint && hoveredPoint.index === idx ? 7 : 4.5"
+                  :class="pt.data.status === 'upcoming' ? 'fill-amber-400 stroke-slate-950' : 'fill-emerald-400 stroke-slate-950'"
+                  class="stroke-2 cursor-pointer transition-all"
+                  @mouseenter="hoveredPoint = { index: idx, ...pt.data }"
+                  @mouseleave="hoveredPoint = null"
+                />
+              </template>
+            </svg>
+          </template>
+
+          <!-- Hover Tooltip -->
+          <div 
+            x-show="hoveredPoint" 
+            class="absolute top-2 right-2 bg-slate-900/95 border border-slate-700 px-3 py-2 rounded-xl shadow-2xl text-xs space-y-0.5 backdrop-blur-md"
+          >
+            <p class="font-bold" :class="hoveredPoint?.status === 'upcoming' ? 'text-amber-400' : 'text-emerald-400'" x-text="hoveredPoint?.source + ' (' + hoveredPoint?.amount + ')'"></p>
+            <p class="text-slate-200">Vault Balance: <span class="font-black text-white" x-text="'$' + hoveredPoint?.balance"></span></p>
+            <p class="text-[10px] text-slate-400" x-text="'Date: ' + hoveredPoint?.date + ' | Status: ' + hoveredPoint?.status"></p>
+          </div>
         </div>
       </div>
-    </section>
 
-    <!-- SPLIT-VIEW TRANSACTION TIMELINE & LEDGER -->
-    <section class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 shadow-xl space-y-6">
-      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 class="text-lg font-bold text-white flex items-center gap-2">⏳ Split-View Transaction Timeline</h2>
-          <p class="text-xs text-slate-400 mt-0.5">Parallel ledger tracking deposits against expenditures.</p>
-        </div>
+    </div>
 
-        <button 
-          x-show="isAdmin" 
-          @click="showTxForm = !showTxForm"
-          class="bg-emerald-600 hover:bg-emerald-500 transition text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-lg shadow-emerald-950/50"
-        >
-          <span>+</span> Log New Transaction
-        </button>
-      </div>
-
-      <!-- ADMIN ADD TRANSACTION FORM -->
-      <form 
-        x-show="showTxForm && isAdmin" 
-        x-transition
-        @submit.prevent="addTransaction()" 
-        class="bg-slate-950 border border-slate-800 p-5 rounded-xl space-y-4 shadow-inner"
-      >
-        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">New Financial Entry</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-          <input type="text" placeholder="Transaction Title / Source" x-model="newTx.source" class="bg-slate-900 text-xs text-white border border-slate-800 rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500" required>
-          <input type="number" step="0.01" placeholder="Amount ($)" x-model="newTx.amount" class="bg-slate-900 text-xs text-white border border-slate-800 rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500" required>
-          <select x-model="newTx.type" class="bg-slate-900 text-xs text-white border border-slate-800 rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500">
-            <option value="expense">Expense (-)</option>
-            <option value="deposit">Deposit (+)</option>
-          </select>
-          <input type="date" x-model="newTx.date" class="bg-slate-900 text-xs text-white border border-slate-800 rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500" required>
-        </div>
-        <div class="flex justify-end gap-2">
-          <button type="button" @click="showTxForm = false" class="text-xs text-slate-400 hover:text-white px-3 py-1.5">Cancel</button>
-          <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-1.5 rounded-lg">Save Record</button>
+    <!-- ADMIN INPUT FORMS SLIDE-OUT / MODALS -->
+    <div x-show="showTxForm && isAdmin" x-transition class="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-3">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Log New Transaction or Projection</h3>
+      <form @submit.prevent="addTransaction()" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <input type="text" placeholder="Title / Description" x-model="newTx.source" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500" required>
+        <input type="number" step="0.01" placeholder="Amount ($)" x-model="newTx.amount" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500" required>
+        <select x-model="newTx.type" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500">
+          <option value="deposit">Deposit (+)</option>
+          <option value="expense">Expense (-)</option>
+        </select>
+        <select x-model="newTx.status" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500">
+          <option value="cleared">Cleared (Past/Current)</option>
+          <option value="upcoming">Upcoming (Future Projection)</option>
+        </select>
+        <input type="date" x-model="newTx.date" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500" required>
+        <div class="lg:col-span-5 flex justify-end gap-2 pt-1">
+          <button type="button" @click="showTxForm = false" class="text-xs text-slate-400 hover:text-white px-3 py-1">Cancel</button>
+          <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-1.5 rounded-lg">Save Entry</button>
         </div>
       </form>
+    </div>
 
-      <!-- SPLIT TIMELINE COLUMNS -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-        
-        <!-- DEPOSITS TIMELINE COLUMN -->
-        <div class="space-y-3">
-          <div class="flex items-center justify-between border-b border-emerald-500/20 pb-2">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-              <span>📥</span> Deposits (Incoming)
-            </h3>
-            <span class="text-[10px] font-mono text-emerald-400/80 bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-900/50" x-text="'$' + getTotalDeposits().toFixed(2)"></span>
-          </div>
-
-          <div class="space-y-2.5">
-            <template x-for="t in transactions.filter(item => item.type === 'deposit')" :key="t.id">
-              <div class="bg-slate-950/60 border border-emerald-950/50 p-3.5 rounded-xl flex items-center justify-between hover:border-emerald-800/50 transition">
-                <div>
-                  <p class="text-xs font-bold text-slate-100" x-text="t.source"></p>
-                  <p class="text-[10px] text-slate-500 mt-0.5" x-text="t.date"></p>
-                </div>
-                <div class="flex items-center gap-3">
-                  <span class="text-xs font-bold text-emerald-400 font-mono" x-text="'+$' + Number(t.amount).toFixed(2)"></span>
-                  <button x-show="isAdmin" @click="deleteTransaction(t.id)" class="text-slate-600 hover:text-rose-400 text-xs">✕</button>
-                </div>
-              </div>
-            </template>
-            <div x-show="transactions.filter(item => item.type === 'deposit').length === 0" class="text-center py-6 border border-dashed border-slate-800 rounded-xl text-slate-500 text-xs">
-              No deposit entries recorded yet.
-            </div>
-          </div>
+    <div x-show="showMemberForm && isAdmin" x-transition class="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-3">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Add Club Member to Roster</h3>
+      <form @submit.prevent="addMember()" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <input type="text" placeholder="Full Name" x-model="newMember.name" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500" required>
+        <input type="text" placeholder="Notes (e.g. payment method, role)" x-model="newMember.notes" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500">
+        <div class="flex gap-2">
+          <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-2 rounded-lg">Enlist Member</button>
+          <button type="button" @click="showMemberForm = false" class="text-xs text-slate-400 hover:text-white px-3">Cancel</button>
         </div>
+      </form>
+    </div>
 
-        <!-- EXPENSES TIMELINE COLUMN -->
-        <div class="space-y-3">
-          <div class="flex items-center justify-between border-b border-rose-500/20 pb-2">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
-              <span>📤</span> Expenditures (Outgoing)
-            </h3>
-            <span class="text-[10px] font-mono text-rose-400/80 bg-rose-950/40 px-2 py-0.5 rounded border border-rose-900/50" x-text="'$' + getTotalExpenses().toFixed(2)"></span>
-          </div>
-
-          <div class="space-y-2.5">
-            <template x-for="t in transactions.filter(item => item.type === 'expense')" :key="t.id">
-              <div class="bg-slate-950/60 border border-rose-950/50 p-3.5 rounded-xl flex items-center justify-between hover:border-rose-800/50 transition">
-                <div>
-                  <p class="text-xs font-bold text-slate-100" x-text="t.source"></p>
-                  <p class="text-[10px] text-slate-500 mt-0.5" x-text="t.date"></p>
-                </div>
-                <div class="flex items-center gap-3">
-                  <span class="text-xs font-bold text-rose-400 font-mono" x-text="'-$' + Number(t.amount).toFixed(2)"></span>
-                  <button x-show="isAdmin" @click="deleteTransaction(t.id)" class="text-slate-600 hover:text-rose-400 text-xs">✕</button>
-                </div>
-              </div>
-            </template>
-            <div x-show="transactions.filter(item => item.type === 'expense').length === 0" class="text-center py-6 border border-dashed border-slate-800 rounded-xl text-slate-500 text-xs">
-              No expenditure entries recorded yet.
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- BOTTOM ROW: OBLIGATIONS & MEMBER ROSTER MANAGEMENT -->
-    <section class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <!-- HORIZONTAL SPLIT VIEW: DAY TIMELINE LEDGER & ROSTER -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
       
-      <!-- UPCOMING OBLIGATIONS FEED (5 cols) -->
-      <div class="lg:col-span-5 bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 shadow-xl space-y-4">
-        <div class="flex items-center justify-between">
-          <h2 class="text-lg font-bold text-white flex items-center gap-2">🔔 Upcoming Obligations</h2>
-          <button x-show="isAdmin" @click="showObligationForm = !showObligationForm" class="text-xs text-amber-400 hover:underline font-semibold">+ Add</button>
+      <!-- HORIZONTAL TIMELINE & LEDGER (8 cols) -->
+      <div class="lg:col-span-8 bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="text-base font-bold text-white flex items-center gap-2">⏳ Chronological Timeline & Day Ledger</h2>
+            <p class="text-xs text-slate-400">All posted and projected daily transactions grouped in order.</p>
+          </div>
+          <span class="text-xs text-slate-500 font-mono" x-text="timelineData.length + ' registered events'"></span>
         </div>
 
-        <!-- Add Obligation Form -->
-        <form x-show="showObligationForm && isAdmin" @submit.prevent="addObligation()" class="bg-slate-950 border border-slate-800 p-3.5 rounded-xl space-y-2">
-          <input type="text" placeholder="Obligation Title" x-model="newObligation.title" class="bg-slate-900 text-xs text-white border border-slate-800 rounded px-2.5 py-1.5 w-full focus:outline-none focus:border-amber-500" required>
-          <div class="grid grid-cols-2 gap-2">
-            <input type="number" step="0.01" placeholder="Amount ($)" x-model="newObligation.amount" class="bg-slate-900 text-xs text-white border border-slate-800 rounded px-2.5 py-1.5 focus:outline-none focus:border-amber-500" required>
-            <input type="date" x-model="newObligation.date" class="bg-slate-900 text-xs text-white border border-slate-800 rounded px-2.5 py-1.5 focus:outline-none focus:border-amber-500" required>
-          </div>
-          <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold py-1.5 rounded">Save Obligation</button>
-        </form>
+        <!-- Horizontal Scrollable Day Columns or Timeline Feed -->
+        <div class="space-y-3 max-h-[480px] overflow-y-auto pr-2">
+          <template x-if="timelineData.length === 0">
+            <div class="text-center py-12 border border-dashed border-slate-800 rounded-xl text-slate-500 text-xs">
+              No transactions or future projections posted yet. Use Admin Mode to enter data.
+            </div>
+          </template>
 
-        <div class="space-y-2.5">
-          <template x-for="ann in announcements" :key="ann.id">
-            <div class="bg-slate-950/60 border border-slate-800 p-3.5 rounded-xl flex items-start justify-between">
-              <div class="space-y-1">
-                <p class="text-xs font-bold text-slate-200" x-text="ann.title"></p>
-                <div class="flex items-center gap-3">
-                  <span class="text-xs font-extrabold text-amber-400 font-mono" x-text="'$' + Number(ann.amount).toFixed(2)"></span>
-                  <span class="text-[10px] text-slate-500" x-text="'Due: ' + ann.date"></span>
+          <template x-for="item in timelineData" :key="item.id">
+            <div 
+              class="bg-slate-950/70 border p-3.5 rounded-xl flex items-center justify-between transition"
+              :class="item.status === 'upcoming' ? 'border-amber-950/60 hover:border-amber-700/50' : (item.type === 'deposit' ? 'border-emerald-950/60 hover:border-emerald-700/50' : 'border-rose-950/60 hover:border-rose-700/50')"
+            >
+              <!-- Left: Date & Day Badge -->
+              <div class="flex items-center gap-3">
+                <div class="text-center px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-lg min-w-[70px]">
+                  <p class="text-[9px] font-bold uppercase text-slate-400" x-text="formatDay(item.date)"></p>
+                  <p class="text-xs font-black text-white" x-text="item.date"></p>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <p class="text-xs font-bold text-slate-100" x-text="item.source"></p>
+                    <span 
+                      class="text-[9px] font-semibold px-2 py-0.5 rounded border"
+                      :class="item.status === 'upcoming' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-slate-800 text-slate-400 border-slate-700'"
+                      x-text="item.status === 'upcoming' ? 'Upcoming Projection' : 'Cleared'"
+                    ></span>
+                  </div>
+                  <p class="text-[10px] text-slate-500 mt-0.5" x-text="item.type === 'deposit' ? 'Incoming Deposit' : 'Outgoing Expense'"></p>
                 </div>
               </div>
-              <button x-show="isAdmin" @click="deleteObligation(ann.id)" class="text-slate-600 hover:text-rose-400 text-xs">✕</button>
+
+              <!-- Right: Amount & Actions -->
+              <div class="flex items-center gap-4">
+                <span 
+                  class="text-xs font-bold font-mono"
+                  :class="item.type === 'deposit' ? 'text-emerald-400' : 'text-rose-400'"
+                  x-text="(item.type === 'deposit' ? '+$' : '-$') + Number(item.amount).toFixed(2)"
+                ></span>
+                
+                <div class="flex items-center gap-2" x-show="isAdmin">
+                  <button 
+                    x-show="item.status === 'upcoming'"
+                    @click="markCleared(item.id)" 
+                    class="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded hover:bg-emerald-900"
+                  >Clear</button>
+                  <button @click="deleteTransaction(item.id)" class="text-slate-600 hover:text-rose-400 text-xs">✕</button>
+                </div>
+              </div>
             </div>
           </template>
         </div>
       </div>
 
-      <!-- MEMBER ROSTER & DUES MANAGEMENT (7 cols) -->
-      <div class="lg:col-span-7 bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 shadow-xl space-y-4">
-        <div class="flex items-center justify-between">
+      <!-- MEMBER ROSTER & DUES PANEL (4 cols) -->
+      <div class="lg:col-span-4 bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex justify-between items-center">
           <div>
-            <h2 class="text-lg font-bold text-white flex items-center gap-2">👥 Member Roster & Dues</h2>
-            <p class="text-xs text-slate-400 mt-0.5">Track individual member payment statuses and notes.</p>
+            <h2 class="text-base font-bold text-white flex items-center gap-2">👥 Roster & Dues</h2>
+            <p class="text-xs text-slate-400">Member dues tracking.</p>
           </div>
-          <button x-show="isAdmin" @click="showMemberForm = !showMemberForm" class="text-xs text-blue-400 hover:underline font-semibold">+ Add Member</button>
+          <span class="text-xs text-slate-500 font-mono" x-text="roster.length + ' members'"></span>
         </div>
 
-        <!-- Add Member Form -->
-        <form x-show="showMemberForm && isAdmin" @submit.prevent="addMember()" class="bg-slate-950 border border-slate-800 p-3.5 rounded-xl space-y-2">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <input type="text" placeholder="Member Name" x-model="newMember.name" class="bg-slate-900 text-xs text-white border border-slate-800 rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-500" required>
-            <input type="text" placeholder="Notes / Details" x-model="newMember.notes" class="bg-slate-900 text-xs text-white border border-slate-800 rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-500">
-          </div>
-          <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-1.5 rounded">Enlist Member</button>
-        </form>
+        <div class="space-y-2.5 max-h-[480px] overflow-y-auto pr-1">
+          <template x-if="roster.length === 0">
+            <div class="text-center py-12 border border-dashed border-slate-800 rounded-xl text-slate-500 text-xs">
+              No members listed. Add members in Admin Mode.
+            </div>
+          </template>
 
-        <div class="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
           <template x-for="member in roster" :key="member.id">
-            <div class="bg-slate-950/60 border border-slate-800/80 p-3.5 rounded-xl flex items-center justify-between">
+            <div class="bg-slate-950/70 border border-slate-800 p-3 rounded-xl flex items-center justify-between">
               <div>
                 <p class="text-xs font-bold text-slate-200" x-text="member.name"></p>
-                <p class="text-[10px] text-slate-500 mt-0.5" x-show="member.notes" x-text="member.notes"></p>
+                <p class="text-[10px] text-slate-500" x-show="member.notes" x-text="member.notes"></p>
               </div>
 
-              <div class="flex items-center gap-3">
+              <div class="flex items-center gap-2">
                 <button 
                   :disabled="!isAdmin"
                   @click="toggleDues(member.id)"
-                  class="text-[11px] font-bold px-2.5 py-1 rounded-lg transition border"
+                  class="text-[10px] font-bold px-2 py-1 rounded transition border"
                   :class="member.duesPaid ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border-rose-500/30'"
-                  x-text="member.duesPaid ? 'Paid Dues ✓' : 'Unpaid Dues !'"
+                  x-text="member.duesPaid ? 'Paid ✓' : 'Unpaid !'"
                 ></button>
                 <button x-show="isAdmin" @click="removeMember(member.id)" class="text-slate-600 hover:text-rose-400 text-xs">✕</button>
               </div>
@@ -322,63 +328,118 @@
         </div>
       </div>
 
-    </section>
+    </div>
 
   </main>
 
-  <!-- APP STATE & CONTROLLER -->
+  <!-- ADMIN PASSWORD MODAL -->
+  <div 
+    x-show="showPasswordModal" 
+    class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+    x-transition
+  >
+    <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-sm w-full space-y-4 shadow-2xl">
+      <h3 class="text-sm font-bold text-white flex items-center gap-2">🔒 Enter Admin Password</h3>
+      <p class="text-xs text-slate-400">Provide password to unlock executive editing capabilities.</p>
+      
+      <form @submit.prevent="verifyPassword()">
+        <input 
+          type="password" 
+          x-model="passwordInput" 
+          placeholder="Password (Default: admin123)" 
+          class="bg-slate-950 border border-slate-800 text-xs text-white rounded-lg px-3 py-2 w-full focus:outline-none focus:border-emerald-500 mb-3"
+          required
+        >
+        <p x-show="passwordError" class="text-[10px] text-rose-400 mb-3">Incorrect admin password. Try again.</p>
+        
+        <div class="flex justify-end gap-2">
+          <button type="button" @click="showPasswordModal = false; passwordError = false;" class="text-xs text-slate-400 hover:text-white px-3 py-1.5">Cancel</button>
+          <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-1.5 rounded-lg">Authenticate</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- APP STATE & ENGINE -->
   <script>
     function financeApp() {
       return {
-        isAdmin: true,
+        isAdmin: false,
+        showPasswordModal: false,
+        passwordInput: '',
+        passwordError: false,
+        adminPassword: 'admin123', // Set your preferred board password here
+
+        startingBalance: 0.00,
+        editingStarting: false,
         showTxForm: false,
-        showObligationForm: false,
         showMemberForm: false,
-        startingBalance: 250.00,
         hoveredPoint: null,
 
-        newTx: { source: '', amount: '', type: 'expense', date: '' },
-        newObligation: { title: '', amount: '', date: '' },
+        newTx: { source: '', amount: '', type: 'deposit', status: 'cleared', date: '' },
         newMember: { name: '', notes: '' },
 
-        // Clean initial setup
-        transactions: [
-          { id: 1, type: "deposit", source: "Initial Club Vault Allocation", amount: 500.00, date: "2026-08-01" },
-          { id: 2, type: "expense", source: "Meeting Room Reservation", amount: 45.00, date: "2026-08-10" }
-        ],
+        // Clean starting arrays — NO SEED DATA
+        timelineData: [],
+        roster: [],
 
-        roster: [
-          { id: 1, name: "Executive Board Member", duesPaid: true, notes: "President" }
-        ],
+        toggleAdminPrompt() {
+          if (this.isAdmin) {
+            this.isAdmin = false;
+          } else {
+            this.passwordInput = '';
+            this.passwordError = false;
+            this.showPasswordModal = true;
+          }
+        },
 
-        announcements: [
-          { id: 1, title: "Upcoming Semester Registration Fee", amount: 120.00, date: "2026-09-01" }
-        ],
+        verifyPassword() {
+          if (this.passwordInput === this.adminPassword) {
+            this.isAdmin = true;
+            this.showPasswordModal = false;
+            this.passwordError = false;
+          } else {
+            this.passwordError = true;
+          }
+        },
 
-        getTotalDeposits() {
-          return this.transactions
-            .filter(t => t.type === 'deposit')
+        formatDay(dateStr) {
+          if (!dateStr) return '';
+          const d = new Date(dateStr + 'T00:00:00');
+          return d.toLocaleDateString('en-US', { weekday: 'short' });
+        },
+
+        getTotalClearedDeposits() {
+          return this.timelineData
+            .filter(t => t.type === 'deposit' && t.status === 'cleared')
             .reduce((sum, t) => sum + Number(t.amount), 0);
         },
 
-        getTotalExpenses() {
-          return this.transactions
-            .filter(t => t.type === 'expense')
+        getTotalClearedExpenses() {
+          return this.timelineData
+            .filter(t => t.type === 'expense' && t.status === 'cleared')
             .reduce((sum, t) => sum + Number(t.amount), 0);
         },
 
         getCurrentBalance() {
-          return this.startingBalance + this.getTotalDeposits() - this.getTotalExpenses();
+          return Number(this.startingBalance) + this.getTotalClearedDeposits() - this.getTotalClearedExpenses();
+        },
+
+        getProjectedBalance() {
+          const allDeposits = this.timelineData.filter(t => t.type === 'deposit').reduce((sum, t) => sum + Number(t.amount), 0);
+          const allExpenses = this.timelineData.filter(t => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount), 0);
+          return Number(this.startingBalance) + allDeposits - allExpenses;
         },
 
         getCalculatedGraphData() {
-          const sorted = [...this.transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
-          let running = this.startingBalance;
+          const sorted = [...this.timelineData].sort((a, b) => new Date(a.date) - new Date(b.date));
+          let running = Number(this.startingBalance);
           return sorted.map((tx) => {
             running += tx.type === 'deposit' ? Number(tx.amount) : -Number(tx.amount);
             return {
               date: tx.date,
               source: tx.source,
+              status: tx.status,
               amount: tx.type === 'deposit' ? `+$${tx.amount}` : `-$${tx.amount}`,
               balance: running
             };
@@ -388,10 +449,10 @@
         getGraphPoints() {
           const data = this.getCalculatedGraphData();
           if (data.length === 0) return [];
-          const width = 600, height = 180, padding = 30;
+          const width = 700, height = 170, padding = 30;
           const balances = data.map(d => d.balance);
-          const minBal = Math.min(...balances, this.startingBalance) - 50;
-          const maxBal = Math.max(...balances, this.startingBalance) + 50;
+          const minBal = Math.min(...balances, Number(this.startingBalance)) - 50;
+          const maxBal = Math.max(...balances, Number(this.startingBalance)) + 50;
           const balRange = maxBal - minBal || 1;
 
           return data.map((d, idx) => {
@@ -401,63 +462,57 @@
           });
         },
 
-        generateGraphPath() {
+        generateGraphPath(filterStatus) {
           const points = this.getGraphPoints();
           if (points.length === 0) return "";
-          const width = 600, height = 180, padding = 30;
+          const width = 700, height = 170, padding = 30;
           const data = this.getCalculatedGraphData();
           const balances = data.map(d => d.balance);
-          const minBal = Math.min(...balances, this.startingBalance) - 50;
-          const maxBal = Math.max(...balances, this.startingBalance) + 50;
+          const minBal = Math.min(...balances, Number(this.startingBalance)) - 50;
+          const maxBal = Math.max(...balances, Number(this.startingBalance)) + 50;
           const balRange = maxBal - minBal || 1;
           
-          const startY = height - padding - ((this.startingBalance - minBal) / balRange) * (height - 2 * padding);
+          const startY = height - padding - ((Number(this.startingBalance) - minBal) / balRange) * (height - 2 * padding);
           
           let path = `M ${padding} ${startY}`;
-          points.forEach(p => path += ` L ${p.x} ${p.y}`);
+          points.forEach(p => {
+            if (!filterStatus || (filterStatus === 'cleared' && p.data.status === 'cleared') || (filterStatus === 'projected')) {
+              path += ` L ${p.x} ${p.y}`;
+            }
+          });
           return path;
         },
 
         generateGraphAreaPath() {
-          const linePath = this.generateGraphPath();
+          const linePath = this.generateGraphPath('projected');
           if (!linePath) return "";
           const points = this.getGraphPoints();
           const lastPoint = points[points.length - 1];
-          const padding = 30, height = 180;
+          const padding = 30, height = 170;
           return `${linePath} L ${lastPoint.x} ${height - padding} L ${padding} ${height - padding} Z`;
         },
 
         addTransaction() {
           if (!this.newTx.source || !this.newTx.amount || !this.newTx.date) return;
-          this.transactions.push({
+          this.timelineData.push({
             id: Date.now(),
             source: this.newTx.source,
             amount: parseFloat(this.newTx.amount),
             type: this.newTx.type,
+            status: this.newTx.status,
             date: this.newTx.date
           });
-          this.newTx = { source: '', amount: '', type: 'expense', date: '' };
+          this.newTx = { source: '', amount: '', type: 'deposit', status: 'cleared', date: '' };
           this.showTxForm = false;
         },
 
+        markCleared(id) {
+          const item = this.timelineData.find(t => t.id === id);
+          if (item) item.status = 'cleared';
+        },
+
         deleteTransaction(id) {
-          this.transactions = this.transactions.filter(t => t.id !== id);
-        },
-
-        addObligation() {
-          if (!this.newObligation.title || !this.newObligation.amount || !this.newObligation.date) return;
-          this.announcements.push({
-            id: Date.now(),
-            title: this.newObligation.title,
-            amount: parseFloat(this.newObligation.amount),
-            date: this.newObligation.date
-          });
-          this.newObligation = { title: '', amount: '', date: '' };
-          this.showObligationForm = false;
-        },
-
-        deleteObligation(id) {
-          this.announcements = this.announcements.filter(a => a.id !== id);
+          this.timelineData = this.timelineData.filter(t => t.id !== id);
         },
 
         addMember() {
