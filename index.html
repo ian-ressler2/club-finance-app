@@ -18,7 +18,7 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen w-screen flex flex-col font-sans antialiased" x-data="financeApp()" x-cloak>
 
-  <!-- AUTH GATE -->
+  <!-- AUTH GATE (person-level account, no club tied to it) -->
   <div x-show="!user" x-cloak class="flex-1 w-full flex items-center justify-center p-4">
     <div class="w-full max-w-sm">
       <div class="text-center mb-6">
@@ -30,14 +30,14 @@
       <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-2xl">
         <div class="flex gap-1 bg-slate-950 border border-slate-800 rounded-xl p-1 mb-4">
           <button type="button" @click="authMode = 'login'; authError = ''" class="flex-1 text-xs font-bold py-1.5 rounded-lg transition" :class="authMode === 'login' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-slate-200'">Log In</button>
-          <button type="button" @click="authMode = 'register'; authError = ''" class="flex-1 text-xs font-bold py-1.5 rounded-lg transition" :class="authMode === 'register' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-slate-200'">Create a Club</button>
+          <button type="button" @click="authMode = 'signup'; authError = ''" class="flex-1 text-xs font-bold py-1.5 rounded-lg transition" :class="authMode === 'signup' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-slate-200'">Sign Up</button>
         </div>
 
         <!-- LOGIN FORM -->
         <form x-show="authMode === 'login'" @submit.prevent="login()" class="space-y-2.5">
           <div>
             <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Email</label>
-            <input type="email" x-model="authForm.email" required autocomplete="username" class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="treasurer@club.edu">
+            <input type="email" x-model="authForm.email" required autocomplete="username" class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="you@school.edu">
           </div>
           <div>
             <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Password</label>
@@ -51,15 +51,12 @@
           <button type="button" @click="forgotPassword()" class="w-full text-[10px] text-slate-500 hover:text-slate-300 hover:underline text-center pt-1">Forgot password?</button>
         </form>
 
-        <!-- REGISTER FORM -->
-        <form x-show="authMode === 'register'" @submit.prevent="registerClub()" class="space-y-2.5">
-          <div>
-            <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Club Name</label>
-            <input type="text" x-model="authForm.clubName" required class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="Swim Club">
-          </div>
+        <!-- SIGN UP FORM -->
+        <form x-show="authMode === 'signup'" @submit.prevent="signup()" class="space-y-2.5">
+          <p class="text-[11px] text-slate-400 -mt-1 mb-1">Create your personal account. You'll create or join clubs after signing in — you can belong to more than one.</p>
           <div>
             <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Email</label>
-            <input type="email" x-model="authForm.email" required autocomplete="username" class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="treasurer@club.edu">
+            <input type="email" x-model="authForm.email" required autocomplete="username" class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="you@school.edu">
           </div>
           <div>
             <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Password</label>
@@ -71,34 +68,119 @@
           </div>
           <p x-show="authError" class="text-[11px] text-rose-400" x-text="authError"></p>
           <button type="submit" :disabled="authLoading" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-bold py-2 rounded-lg transition mt-1">
-            <span x-text="authLoading ? 'Creating club…' : 'Create Club'"></span>
+            <span x-text="authLoading ? 'Creating account…' : 'Sign Up'"></span>
           </button>
         </form>
       </div>
     </div>
   </div>
 
+  <!-- CLUB SWITCHER (logged in, no club currently open) -->
+  <div x-show="user && !activeClubId" x-cloak class="flex-1 w-full flex items-start justify-center p-4 pt-10 sm:pt-16">
+    <div class="w-full max-w-lg space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-lg font-extrabold text-white flex items-center gap-2"><span class="p-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">🛡️</span> Your Clubs</h1>
+          <p class="text-xs text-slate-400 mt-0.5" x-text="user?.email"></p>
+        </div>
+        <button @click="logout()" class="text-[10px] font-bold text-slate-400 hover:text-rose-400 px-2.5 py-1.5 rounded-lg border border-slate-800 hover:border-rose-500/30 transition">Sign Out</button>
+      </div>
+
+      <!-- MEMBERSHIPS -->
+      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-2">
+        <template x-if="Object.keys(myClubs).length === 0">
+          <p class="text-center py-4 text-slate-600 text-xs italic">You're not in any clubs yet. Create one, or search below to request access.</p>
+        </template>
+        <template x-for="[clubId, role] in Object.entries(myClubs)" :key="clubId">
+          <button @click="enterClub(clubId)" class="w-full flex items-center justify-between bg-slate-950/70 border border-slate-800 hover:border-emerald-500/40 p-3 rounded-xl transition text-left">
+            <span class="text-sm font-bold text-white" x-text="clubDirectoryName(clubId)"></span>
+            <span class="text-[9px] font-bold px-2 py-0.5 rounded border"
+                  :class="role === 'admin' ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : (role === 'officer' ? 'text-blue-400 border-blue-500/30 bg-blue-500/10' : 'text-slate-400 border-slate-700 bg-slate-800/50')"
+                  x-text="role"></span>
+          </button>
+        </template>
+
+        <template x-if="Object.keys(pendingRequests).length > 0">
+          <div class="pt-2 mt-2 border-t border-slate-800 space-y-2">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Awaiting Approval</p>
+            <template x-for="[clubId, name] in Object.entries(pendingRequests)" :key="clubId">
+              <div class="flex items-center justify-between bg-slate-950/40 border border-slate-800/60 p-2.5 rounded-xl">
+                <span class="text-xs text-slate-300" x-text="name"></span>
+                <div class="flex items-center gap-2">
+                  <span class="text-[9px] text-amber-400 font-bold">Pending</span>
+                  <button @click="cancelRequest(clubId)" class="text-[10px] text-slate-500 hover:text-rose-400">Cancel</button>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+
+      <!-- CREATE A CLUB -->
+      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4">
+        <button @click="showCreateClubForm = !showCreateClubForm" class="w-full flex items-center justify-between text-sm font-bold text-white">
+          <span>+ Create a Club</span>
+          <span class="text-slate-500 text-xs" x-text="showCreateClubForm ? '−' : '+'"></span>
+        </button>
+        <form x-show="showCreateClubForm" x-transition @submit.prevent="createClub()" class="mt-3 space-y-2.5">
+          <div>
+            <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Club Name</label>
+            <input type="text" x-model="newClubForm.name" required class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="My Club">
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Club Contact Email <span class="text-slate-600 normal-case font-normal">(optional, shown to members)</span></label>
+            <input type="email" x-model="newClubForm.contactEmail" class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="myclub@school.edu">
+          </div>
+          <p x-show="clubFormError" class="text-[11px] text-rose-400" x-text="clubFormError"></p>
+          <button type="submit" :disabled="creatingClub" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-bold py-2 rounded-lg transition">
+            <span x-text="creatingClub ? 'Creating…' : 'Create Club'"></span>
+          </button>
+        </form>
+      </div>
+
+      <!-- JOIN A CLUB -->
+      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4">
+        <p class="text-sm font-bold text-white mb-2">Join an Existing Club</p>
+        <input type="text" x-model="joinSearch" @input="loadClubDirectory()" @focus="loadClubDirectory()" placeholder="Search club name…" class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500">
+        <div class="mt-2 space-y-1.5">
+          <template x-for="c in getJoinResults()" :key="c.id">
+            <div class="flex items-center justify-between bg-slate-950/70 border border-slate-800 p-2.5 rounded-xl">
+              <span class="text-xs font-semibold text-slate-200" x-text="c.name"></span>
+              <template x-if="myClubs[c.id]">
+                <span class="text-[9px] text-slate-500 font-bold">Already a member</span>
+              </template>
+              <template x-if="!myClubs[c.id] && pendingRequests[c.id]">
+                <span class="text-[9px] text-amber-400 font-bold">Requested</span>
+              </template>
+              <template x-if="!myClubs[c.id] && !pendingRequests[c.id]">
+                <button @click="requestToJoin(c.id, c.name)" class="text-[10px] font-bold bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1 rounded-lg">Request Access</button>
+              </template>
+            </div>
+          </template>
+          <p x-show="joinSearch.trim() && getJoinResults().length === 0" class="text-center py-3 text-slate-600 text-xs italic">No clubs match "<span x-text="joinSearch"></span>".</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- TOP HEADER -->
-  <header x-show="user" class="border-b border-slate-800/80 bg-slate-900/80 backdrop-blur-md px-6 py-2.5 flex-none sticky top-0 z-40">
+  <header x-show="user && activeClubId" class="border-b border-slate-800/80 bg-slate-900/80 backdrop-blur-md px-6 py-2.5 flex-none sticky top-0 z-40">
     <div class="w-full flex items-center justify-between gap-4 flex-wrap">
       <div class="flex items-center gap-3">
+        <button @click="leaveClub()" class="text-slate-500 hover:text-white text-xs font-bold px-1" title="Back to My Clubs">←</button>
         <h1 class="text-lg font-extrabold tracking-tight text-white flex items-center gap-2">
           <span class="p-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">🛡️</span> <span x-text="clubName || 'Club Financial Hub'"></span>
         </h1>
       </div>
 
       <div class="flex items-center gap-2 flex-wrap">
-        <!-- ACCESS LEVEL CONTROL -->
-        <div class="flex items-center gap-3 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl shadow-inner">
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" :class="accessLevel !== 'viewer' ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'"></span>
-            <span class="text-xs font-semibold text-slate-300" x-text="accessLabel()"></span>
-          </div>
-          <div class="flex gap-1">
-            <button @click="requestAccess('viewer')" class="text-[10px] font-bold px-2 py-1 rounded-lg transition" :class="accessLevel==='viewer' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'">Viewer</button>
-            <button @click="requestAccess('officer')" class="text-[10px] font-bold px-2 py-1 rounded-lg transition" :class="accessLevel==='officer' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-300'">Officer</button>
-            <button @click="requestAccess('admin')" class="text-[10px] font-bold px-2 py-1 rounded-lg transition" :class="accessLevel==='admin' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-slate-300'">Admin</button>
-          </div>
+        <div class="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl shadow-inner">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <span class="text-xs font-semibold text-slate-300">Signed in as <span x-text="user?.email"></span></span>
+          <span class="text-[9px] font-bold px-2 py-0.5 rounded border"
+                :class="myRole() === 'admin' ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : (myRole() === 'officer' ? 'text-blue-400 border-blue-500/30 bg-blue-500/10' : 'text-slate-400 border-slate-700 bg-slate-800/50')"
+                x-text="myRole()"></span>
+          <span x-show="Object.keys(clubJoinRequests).length > 0 && can('officer')" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400" x-text="Object.keys(clubJoinRequests).length + ' pending'"></span>
         </div>
         <button @click="logout()" class="text-[10px] font-bold text-slate-400 hover:text-rose-400 px-2.5 py-1.5 rounded-lg border border-slate-800 hover:border-rose-500/30 transition">Sign Out</button>
       </div>
@@ -106,7 +188,13 @@
   </header>
 
   <!-- MAIN LAYOUT -->
-  <main x-show="user" class="flex-1 w-full p-4 grid grid-rows-[auto_auto_1fr] gap-4 max-w-[1600px] mx-auto">
+  <main x-show="user && activeClubId" class="flex-1 w-full p-4 grid grid-rows-[auto_auto_auto_1fr] gap-4 max-w-[1600px] mx-auto">
+
+    <!-- SHORTFALL WARNING -->
+    <div x-show="getShortfallWarning()" x-transition class="flex-none flex items-center gap-2 bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-semibold px-3.5 py-2 rounded-xl">
+      <span>⚠️</span>
+      <span>Balance is projected to go negative around <span class="font-black" x-text="formatDate(getShortfallWarning()?.date)"></span> ($<span class="font-black" x-text="getShortfallWarning()?.balance.toFixed(2)"></span>) based on scheduled transactions.</span>
+    </div>
 
     <!-- TOP SECTION: STAT METRICS & GRAPH -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch flex-none">
@@ -203,16 +291,31 @@
     <!-- ADMIN INPUT FORMS -->
     <div x-show="showTxForm && can('officer')" x-transition class="bg-slate-900 border border-slate-800 p-3 rounded-xl space-y-2 flex-none">
       <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Log Transaction (past, today, or scheduled)</h3>
-      <form @submit.prevent="addTransaction()" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+      <form @submit.prevent="addTransaction()" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
         <input type="text" placeholder="Title / Source" x-model="newTx.source" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500" required>
         <input type="number" step="0.01" min="0" placeholder="Amount ($)" x-model="newTx.amount" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500" required>
         <select x-model="newTx.type" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500">
           <option value="deposit">Deposit</option>
           <option value="expense">Withdrawal</option>
         </select>
+        <select x-model="newTx.category" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500">
+          <option value="Dues">Dues</option>
+          <option value="Fundraising">Fundraising</option>
+          <option value="Merchandise">Merchandise</option>
+          <option value="Events">Events</option>
+          <option value="Equipment">Equipment</option>
+          <option value="Travel">Travel</option>
+          <option value="Other">Other</option>
+        </select>
         <input type="date" x-model="newTx.date" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500" required>
         <input type="text" placeholder="Notes (optional)" x-model="newTx.notes" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500">
-        <div class="lg:col-span-5 flex justify-end gap-2 pt-1">
+        <label class="lg:col-span-3 flex items-center gap-2 text-[11px] text-slate-400 px-0.5">
+          <input type="checkbox" x-model="newTx.repeatMonthly" class="accent-emerald-500">
+          Repeat monthly for
+          <input type="number" min="2" max="24" x-model.number="newTx.repeatCount" :disabled="!newTx.repeatMonthly" class="w-14 bg-slate-950 border border-slate-800 text-xs text-white rounded px-1.5 py-0.5 disabled:opacity-40 focus:outline-none focus:border-emerald-500">
+          occurrences
+        </label>
+        <div class="lg:col-span-3 flex justify-end gap-2 pt-1">
           <button type="button" @click="showTxForm = false" class="text-xs text-slate-400 hover:text-white px-2">Cancel</button>
           <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-lg">Save</button>
         </div>
@@ -220,7 +323,7 @@
     </div>
 
     <div x-show="showMemberForm && can('officer')" x-transition class="bg-slate-900 border border-slate-800 p-3 rounded-xl space-y-2 flex-none">
-      <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Add Member</h3>
+      <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Add Member (dues roster)</h3>
       <form @submit.prevent="addMember()" class="grid grid-cols-1 sm:grid-cols-4 gap-2">
         <input type="text" placeholder="Full Name" x-model="newMember.name" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-500" required>
         <select x-model="newMember.role" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-500">
@@ -246,7 +349,21 @@
             <h2 class="text-xs font-bold text-white flex items-center gap-2">⚖️ Vertical Timeline (Drag cards to a new date row)</h2>
             <p class="text-[10px] text-slate-400">Left = Deposits · Right = Withdrawals · Drop on a row's side to move date &amp; type</p>
           </div>
-          <span class="text-[10px] text-slate-500 font-mono" x-text="transactions.length + ' items'"></span>
+          <span class="text-[10px] text-slate-500 font-mono" x-text="getFilteredTransactions().length + ' of ' + transactions.length + ' items'"></span>
+        </div>
+
+        <div class="flex items-center gap-2 mb-2 flex-none">
+          <input type="text" x-model="searchQuery" placeholder="Search transactions…" class="flex-1 bg-slate-950 border border-slate-800 text-[11px] text-white rounded-lg px-2.5 py-1 focus:outline-none focus:border-emerald-500">
+          <select x-model="categoryFilter" class="bg-slate-950 border border-slate-800 text-[11px] text-slate-300 rounded-lg px-2 py-1 focus:outline-none focus:border-emerald-500">
+            <option value="All">All Categories</option>
+            <option value="Dues">Dues</option>
+            <option value="Fundraising">Fundraising</option>
+            <option value="Merchandise">Merchandise</option>
+            <option value="Events">Events</option>
+            <option value="Equipment">Equipment</option>
+            <option value="Travel">Travel</option>
+            <option value="Other">Other</option>
+          </select>
         </div>
 
         <div class="relative flex-1 min-h-0 overflow-y-auto border border-slate-800 rounded-xl bg-slate-950/60 px-2 py-3">
@@ -255,6 +372,10 @@
 
           <template x-if="transactions.length === 0">
             <div class="text-center py-10 text-slate-600 text-[11px] italic">No transactions yet. Use "+ Transaction" to log or schedule one.</div>
+          </template>
+
+          <template x-if="transactions.length > 0 && getFilteredTransactions().length === 0">
+            <div class="text-center py-10 text-slate-600 text-[11px] italic">No transactions match your search or filter.</div>
           </template>
 
           <template x-for="row in getTimelineRows()" :key="row.kind === 'today' ? 'today-marker' : row.date">
@@ -286,7 +407,9 @@
                         <div class="min-w-0">
                           <div class="flex items-center gap-1.5">
                             <span class="text-xs font-bold text-white truncate" x-text="item.source"></span>
+                            <span x-show="!item.duesFor && item.category && item.category !== 'Other'" class="text-[8px] px-1.5 py-0.5 rounded border flex-none" :class="categoryClass(item.category)" x-text="item.category"></span>
                             <span x-show="item.duesFor" class="text-[8px] bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded border border-purple-500/30 flex-none">Dues</span>
+                            <span x-show="item.recurringGroup" class="text-[8px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/30 flex-none">↻ Recurring</span>
                             <span x-show="isUpcoming(item.date)" class="text-[8px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700 flex-none">Scheduled</span>
                           </div>
                           <p class="text-[9px] text-slate-500 truncate" x-show="item.notes" x-text="item.notes"></p>
@@ -319,6 +442,8 @@
                         <div class="min-w-0 text-right">
                           <div class="flex items-center gap-1.5 justify-end">
                             <span x-show="isUpcoming(item.date)" class="text-[8px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700 flex-none">Scheduled</span>
+                            <span x-show="item.recurringGroup" class="text-[8px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/30 flex-none">↻ Recurring</span>
+                            <span x-show="item.category && item.category !== 'Other'" class="text-[8px] px-1.5 py-0.5 rounded border flex-none" :class="categoryClass(item.category)" x-text="item.category"></span>
                             <span class="text-xs font-bold text-white truncate" x-text="item.source"></span>
                           </div>
                           <p class="text-[9px] text-slate-500 truncate" x-show="item.notes" x-text="item.notes"></p>
@@ -339,9 +464,9 @@
       </div>
 
       <!-- ROSTER PANEL (4 cols) -->
-      <div class="lg:col-span-4 bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 shadow-lg flex flex-col min-h-0">
+      <div class="lg:col-span-4 bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 shadow-lg flex flex-col min-h-0 overflow-y-auto">
         <div class="flex justify-between items-center mb-1 flex-none">
-          <h2 class="text-xs font-bold text-white flex items-center gap-2">👥 Roster &amp; Permissions</h2>
+          <h2 class="text-xs font-bold text-white flex items-center gap-2">👥 Roster &amp; Dues</h2>
           <span class="text-[10px] text-slate-500 font-mono" x-text="roster.length + ' members'"></span>
         </div>
 
@@ -360,7 +485,7 @@
           </button>
         </div>
 
-        <div class="space-y-2 overflow-y-auto flex-1 pr-1">
+        <div class="space-y-2 flex-none">
           <template x-if="roster.length === 0">
             <div class="text-center py-8 text-slate-600 text-[11px] italic">No members listed yet.</div>
           </template>
@@ -381,7 +506,7 @@
                 </div>
               </div>
               <div class="mt-1.5 flex items-center gap-2">
-                <span class="text-[9px] text-slate-500">Role:</span>
+                <span class="text-[9px] text-slate-500">Position:</span>
                 <select x-show="can('admin')" x-model="member.role" @change="syncToFirebase()"
                         class="bg-slate-900 border border-slate-800 text-[9px] text-slate-300 rounded px-1.5 py-0.5 focus:outline-none focus:border-blue-500">
                   <option value="Viewer">Viewer</option>
@@ -396,17 +521,42 @@
           </template>
         </div>
 
-        <!-- ADMIN: PASSWORD SETTINGS -->
-        <div x-show="can('admin')" class="mt-3 pt-3 border-t border-slate-800 flex-none space-y-2">
-          <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Access Passwords</p>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="text-[9px] text-slate-500">Officer Password</label>
-              <input type="text" x-model="passwords.officer" @change="syncToFirebase()" class="w-full bg-slate-950 border border-slate-800 text-[10px] text-white rounded px-2 py-1 focus:outline-none focus:border-blue-500">
+        <!-- ACCESS & JOIN REQUESTS (officer+ can approve/deny; admin manages members) -->
+        <div x-show="can('officer')" class="mt-3 pt-3 border-t border-slate-800 flex-none space-y-3">
+          <div>
+            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Pending Access Requests</p>
+            <template x-if="Object.keys(clubJoinRequests).length === 0">
+              <p class="text-[10px] text-slate-600 italic">No pending requests.</p>
+            </template>
+            <div class="space-y-1.5">
+              <template x-for="[uid, req] in Object.entries(clubJoinRequests)" :key="uid">
+                <div class="flex items-center justify-between bg-slate-950/70 border border-slate-800 p-2 rounded-lg">
+                  <span class="text-[10px] text-slate-300 truncate" x-text="req.email"></span>
+                  <div class="flex items-center gap-1.5 flex-none">
+                    <button @click="approveRequest(uid, req.email)" class="text-[9px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-0.5 rounded">Approve</button>
+                    <button @click="denyRequest(uid)" class="text-[9px] font-bold bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white px-2 py-0.5 rounded">Deny</button>
+                  </div>
+                </div>
+              </template>
             </div>
-            <div>
-              <label class="text-[9px] text-slate-500">Admin Password</label>
-              <input type="text" x-model="passwords.admin" @change="syncToFirebase()" class="w-full bg-slate-950 border border-slate-800 text-[10px] text-white rounded px-2 py-1 focus:outline-none focus:border-emerald-500">
+          </div>
+
+          <div x-show="can('admin')">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Club Members (login access)</p>
+            <div class="space-y-1.5">
+              <template x-for="[uid, m] in Object.entries(clubMembers)" :key="uid">
+                <div class="flex items-center justify-between bg-slate-950/70 border border-slate-800 p-2 rounded-lg gap-2">
+                  <span class="text-[10px] text-slate-300 truncate" x-text="m.email"></span>
+                  <div class="flex items-center gap-1.5 flex-none">
+                    <select :value="m.role" @change="setMemberRole(uid, $event.target.value)" class="bg-slate-900 border border-slate-800 text-[9px] text-slate-300 rounded px-1 py-0.5 focus:outline-none focus:border-blue-500">
+                      <option value="viewer">Viewer</option>
+                      <option value="officer">Officer</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                    <button @click="removeClubMember(uid)" class="text-slate-600 hover:text-rose-400 text-xs">✕</button>
+                  </div>
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -416,29 +566,10 @@
 
   </main>
 
-  <!-- ACCESS PASSWORD MODAL -->
-  <div x-show="showPasswordModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-transition>
-    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl max-w-sm w-full space-y-3 shadow-2xl">
-      <h3 class="text-xs font-bold text-white flex items-center gap-2">🔒 Enter <span x-text="pendingLevel === 'admin' ? 'Admin' : 'Officer'"></span> Password</h3>
-      <p class="text-[11px] text-slate-400">Provide the password to unlock <span x-text="pendingLevel"></span> permissions.</p>
-
-      <form @submit.prevent="verifyPassword()">
-        <input type="password" x-model="passwordInput" placeholder="Password" autofocus
-               class="bg-slate-950 border border-slate-800 text-xs text-white rounded-lg px-3 py-1.5 w-full focus:outline-none focus:border-emerald-500 mb-2" required>
-        <p x-show="passwordError" class="text-[10px] text-rose-400 mb-2">Incorrect password. Try again.</p>
-
-        <div class="flex justify-end gap-2">
-          <button type="button" @click="showPasswordModal = false; passwordError = false;" class="text-xs text-slate-400 hover:text-white px-2.5 py-1">Cancel</button>
-          <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-lg">Unlock</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <!-- APP STATE & FIREBASE ENGINE -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getDatabase, ref, onValue, set, get, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import Alpine from "https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/module.esm.js";
 
@@ -459,22 +590,36 @@
 
     window.financeApp = function() {
       return {
+        // ---------- IDENTITY & CLUB SELECTION ----------
         user: null,
-        clubName: '',
+        myClubs: {},              // { clubId: role } — my approved memberships
+        pendingRequests: {},      // { clubId: clubName } — clubs I've asked to join
+        activeClubId: null,
+        clubDirectoryCache: {},   // { clubId: name } — resolved names for myClubs rows
+        clubDirectory: [],        // [{id, name}] search results
+        clubMembers: {},          // { uid: {role, email} } for the active club
+        clubJoinRequests: {},     // { uid: {email, requestedAt} } for the active club
+
         authMode: 'login',
-        authForm: { clubName: '', email: '', password: '', confirmPassword: '' },
+        authForm: { email: '', password: '', confirmPassword: '' },
         authError: '',
         authNotice: '',
         authLoading: false,
+
+        showCreateClubForm: false,
+        newClubForm: { name: '', contactEmail: '' },
+        clubFormError: '',
+        creatingClub: false,
+        joinSearch: '',
+
+        _userUnsub: null,
         _dataUnsub: null,
+        _membersUnsub: null,
+        _requestsUnsub: null,
 
-        accessLevel: 'viewer',
-        pendingLevel: null,
-        showPasswordModal: false,
-        passwordInput: '',
-        passwordError: false,
-        passwords: { officer: 'officer123', admin: 'admin123' },
-
+        // ---------- CLUB DASHBOARD STATE ----------
+        clubName: '',
+        clubContactEmail: '',
         startingBalance: 0.00,
         editingStarting: false,
         duesAmount: 50.00,
@@ -487,61 +632,127 @@
 
         todayStr: new Date().toISOString().split('T')[0],
 
-        newTx: { source: '', amount: '', type: 'deposit', date: '', notes: '' },
+        newTx: { source: '', amount: '', type: 'deposit', date: '', notes: '', category: 'Other', repeatMonthly: false, repeatCount: 3 },
         newMember: { name: '', role: 'Viewer', notes: '' },
+        searchQuery: '',
+        categoryFilter: 'All',
 
         transactions: [],
         roster: [],
 
+        // ---------- INIT ----------
         init() {
           onAuthStateChanged(auth, (fbUser) => {
-            if (this._dataUnsub) {
-              this._dataUnsub();
-              this._dataUnsub = null;
-            }
+            this._teardownAll();
             if (fbUser) {
               this.user = { uid: fbUser.uid, email: fbUser.email };
-              this.attachClubListener(fbUser.uid);
+              this.attachUserListener(fbUser.uid);
             } else {
               this.user = null;
-              this.clubName = '';
-              this.resetLocalState();
+              this.resetAll();
             }
           });
         },
 
-        attachClubListener(uid) {
-          const clubRef = ref(db, `clubs/${uid}`);
-          this._dataUnsub = onValue(clubRef, (snapshot) => {
+        _teardownAll() {
+          [this._userUnsub, this._dataUnsub, this._membersUnsub, this._requestsUnsub].forEach(u => { if (u) u(); });
+          this._userUnsub = this._dataUnsub = this._membersUnsub = this._requestsUnsub = null;
+        },
+
+        resetAll() {
+          this.myClubs = {};
+          this.pendingRequests = {};
+          this.activeClubId = null;
+          this.clubMembers = {};
+          this.clubJoinRequests = {};
+          this.resetLocalState();
+        },
+
+        resetLocalState() {
+          this.clubName = '';
+          this.clubContactEmail = '';
+          this.startingBalance = 0;
+          this.duesAmount = 50;
+          this.transactions = [];
+          this.roster = [];
+        },
+
+        attachUserListener(uid) {
+          this._userUnsub = onValue(ref(db, `users/${uid}`), (snap) => {
+            const data = snap.val() || {};
+            this.myClubs = data.clubs || {};
+            this.pendingRequests = data.pendingRequests || {};
+            Object.keys(this.myClubs).forEach(id => this.resolveClubName(id));
+            if (this.activeClubId && !this.myClubs[this.activeClubId]) {
+              this.leaveClub();
+            }
+          });
+        },
+
+        resolveClubName(clubId) {
+          if (this.clubDirectoryCache[clubId]) return;
+          get(ref(db, `clubDirectory/${clubId}/name`)).then(snap => {
+            if (snap.exists()) this.clubDirectoryCache = { ...this.clubDirectoryCache, [clubId]: snap.val() };
+          });
+        },
+
+        clubDirectoryName(clubId) {
+          return this.clubDirectoryCache[clubId] || '…';
+        },
+
+        // ---------- CLUB ENTER/EXIT ----------
+        enterClub(clubId) {
+          this.activeClubId = clubId;
+          this.attachClubListeners(clubId);
+        },
+
+        leaveClub() {
+          [this._dataUnsub, this._membersUnsub, this._requestsUnsub].forEach(u => { if (u) u(); });
+          this._dataUnsub = this._membersUnsub = this._requestsUnsub = null;
+          this.activeClubId = null;
+          this.clubMembers = {};
+          this.clubJoinRequests = {};
+          this.resetLocalState();
+        },
+
+        attachClubListeners(clubId) {
+          this._dataUnsub = onValue(ref(db, `clubs/${clubId}`), (snapshot) => {
             const data = snapshot.val();
             if (!data) return;
-            this.clubName = data.clubName ?? '';
+            this.clubName = data.name ?? '';
+            this.clubContactEmail = data.contactEmail ?? '';
             const fd = data.financeData ?? {};
             this.startingBalance = fd.startingBalance ?? 0;
             this.duesAmount = fd.duesAmount ?? 50;
             this.transactions = fd.transactions ?? [];
             this.roster = fd.roster ?? [];
-            this.passwords = fd.passwords ?? { officer: 'officer123', admin: 'admin123' };
+          });
+          this._membersUnsub = onValue(ref(db, `clubs/${clubId}/members`), (snap) => {
+            this.clubMembers = snap.val() || {};
+          });
+          this._requestsUnsub = onValue(ref(db, `clubs/${clubId}/joinRequests`), (snap) => {
+            this.clubJoinRequests = snap.val() || {};
           });
         },
 
-        resetLocalState() {
-          this.accessLevel = 'viewer';
-          this.startingBalance = 0;
-          this.duesAmount = 50;
-          this.transactions = [];
-          this.roster = [];
-          this.passwords = { officer: 'officer123', admin: 'admin123' };
+        myRole() {
+          return this.activeClubId ? (this.myClubs[this.activeClubId] || null) : null;
+        },
+
+        can(level) {
+          const role = this.myRole();
+          if (!role) return false;
+          const rank = { viewer: 0, officer: 1, admin: 2 };
+          return rank[role] >= rank[level];
         },
 
         syncToFirebase() {
-          if (!this.user) return;
-          set(ref(db, `clubs/${this.user.uid}/financeData`), {
+          if (!this.activeClubId || !this.can('officer')) return;
+          set(ref(db, `clubs/${this.activeClubId}/financeData`), {
             startingBalance: this.startingBalance,
             duesAmount: this.duesAmount,
             transactions: this.transactions,
-            roster: this.roster,
-            passwords: this.passwords
+            roster: this.roster
           });
         },
 
@@ -551,12 +762,14 @@
             'auth/email-already-in-use': 'An account with that email already exists. Try logging in instead.',
             'auth/invalid-email': 'That email address looks invalid.',
             'auth/weak-password': 'Password must be at least 6 characters.',
-            'auth/user-not-found': 'No club found with that email.',
+            'auth/user-not-found': 'No account found with that email.',
             'auth/wrong-password': 'Incorrect email or password.',
             'auth/invalid-credential': 'Incorrect email or password.',
-            'auth/too-many-requests': 'Too many attempts. Please wait a moment and try again.'
+            'auth/too-many-requests': 'Too many attempts. Please wait a moment and try again.',
+            'auth/configuration-not-found': 'Sign-in isn\'t set up for this app yet. In the Firebase console, open Authentication → Get started, then enable the Email/Password sign-in provider.',
+            'auth/network-request-failed': 'Network error — check your connection and try again.'
           };
-          return map[err.code] || 'Something went wrong. Please try again.';
+          return map[err.code] || `Something went wrong (${err.code || err.message || 'unknown error'}). Please try again.`;
         },
 
         async login() {
@@ -565,7 +778,7 @@
           this.authLoading = true;
           try {
             await signInWithEmailAndPassword(auth, this.authForm.email.trim(), this.authForm.password);
-            this.authForm = { clubName: '', email: '', password: '', confirmPassword: '' };
+            this.authForm = { email: '', password: '', confirmPassword: '' };
           } catch (err) {
             this.authError = this.authErrorMessage(err);
           } finally {
@@ -573,26 +786,15 @@
           }
         },
 
-        async registerClub() {
+        async signup() {
           this.authError = '';
-          if (!this.authForm.clubName.trim()) { this.authError = 'Please enter your club name.'; return; }
           if (this.authForm.password.length < 6) { this.authError = 'Password must be at least 6 characters.'; return; }
           if (this.authForm.password !== this.authForm.confirmPassword) { this.authError = 'Passwords do not match.'; return; }
-
           this.authLoading = true;
           try {
             const cred = await createUserWithEmailAndPassword(auth, this.authForm.email.trim(), this.authForm.password);
-            await set(ref(db, `clubs/${cred.user.uid}`), {
-              clubName: this.authForm.clubName.trim(),
-              financeData: {
-                startingBalance: 0,
-                duesAmount: 50,
-                transactions: [],
-                roster: [],
-                passwords: { officer: 'officer123', admin: 'admin123' }
-              }
-            });
-            this.authForm = { clubName: '', email: '', password: '', confirmPassword: '' };
+            await set(ref(db, `users/${cred.user.uid}/email`), cred.user.email);
+            this.authForm = { email: '', password: '', confirmPassword: '' };
           } catch (err) {
             this.authError = this.authErrorMessage(err);
           } finally {
@@ -614,42 +816,101 @@
 
         async logout() {
           await signOut(auth);
-          this.accessLevel = 'viewer';
         },
 
-        // ---------- ACCESS CONTROL ----------
-        accessLabel() {
-          if (this.accessLevel === 'admin') return 'Admin Mode (Active)';
-          if (this.accessLevel === 'officer') return 'Officer Mode (Active)';
-          return 'Read-Only Mode';
+        // ---------- CLUB CREATE / JOIN ----------
+        async createClub() {
+          this.clubFormError = '';
+          if (!this.newClubForm.name.trim()) { this.clubFormError = 'Please enter a club name.'; return; }
+          this.creatingClub = true;
+          try {
+            const clubRef = push(ref(db, 'clubs'));
+            const clubId = clubRef.key;
+            await set(clubRef, {
+              name: this.newClubForm.name.trim(),
+              contactEmail: this.newClubForm.contactEmail.trim(),
+              createdBy: this.user.uid,
+              createdAt: new Date().toISOString(),
+              members: { [this.user.uid]: { role: 'admin', email: this.user.email } },
+              financeData: { startingBalance: 0, duesAmount: 50, transactions: [], roster: [] }
+            });
+            await set(ref(db, `clubDirectory/${clubId}`), { name: this.newClubForm.name.trim() });
+            await set(ref(db, `users/${this.user.uid}/clubs/${clubId}`), 'admin');
+            this.clubDirectoryCache = { ...this.clubDirectoryCache, [clubId]: this.newClubForm.name.trim() };
+            this.newClubForm = { name: '', contactEmail: '' };
+            this.showCreateClubForm = false;
+            this.enterClub(clubId);
+          } catch (err) {
+            this.clubFormError = this.authErrorMessage(err);
+          } finally {
+            this.creatingClub = false;
+          }
         },
 
-        can(level) {
-          const rank = { viewer: 0, officer: 1, admin: 2 };
-          return rank[this.accessLevel] >= rank[level];
+        async loadClubDirectory() {
+          const snap = await get(ref(db, 'clubDirectory'));
+          const data = snap.val() || {};
+          this.clubDirectory = Object.entries(data).map(([id, v]) => ({ id, name: v.name }));
         },
 
-        requestAccess(level) {
-          if (level === this.accessLevel) return;
-          if (level === 'viewer') {
-            this.accessLevel = 'viewer';
+        getJoinResults() {
+          const q = this.joinSearch.trim().toLowerCase();
+          if (!q) return [];
+          return this.clubDirectory.filter(c => c.name.toLowerCase().includes(q));
+        },
+
+        async requestToJoin(clubId, clubName) {
+          if (this.myClubs[clubId] || this.pendingRequests[clubId]) return;
+          await set(ref(db, `clubs/${clubId}/joinRequests/${this.user.uid}`), { email: this.user.email, requestedAt: new Date().toISOString() });
+          await set(ref(db, `users/${this.user.uid}/pendingRequests/${clubId}`), clubName);
+        },
+
+        async cancelRequest(clubId) {
+          await set(ref(db, `clubs/${clubId}/joinRequests/${this.user.uid}`), null);
+          await set(ref(db, `users/${this.user.uid}/pendingRequests/${clubId}`), null);
+        },
+
+        async approveRequest(uid, email) {
+          if (!this.can('officer')) return;
+          const clubId = this.activeClubId;
+          await set(ref(db, `clubs/${clubId}/members/${uid}`), { role: 'viewer', email });
+          await set(ref(db, `users/${uid}/clubs/${clubId}`), 'viewer');
+          await set(ref(db, `clubs/${clubId}/joinRequests/${uid}`), null);
+          await set(ref(db, `users/${uid}/pendingRequests/${clubId}`), null);
+        },
+
+        async denyRequest(uid) {
+          if (!this.can('officer')) return;
+          const clubId = this.activeClubId;
+          await set(ref(db, `clubs/${clubId}/joinRequests/${uid}`), null);
+          await set(ref(db, `users/${uid}/pendingRequests/${clubId}`), null);
+        },
+
+        adminCount() {
+          return Object.values(this.clubMembers).filter(m => m.role === 'admin').length;
+        },
+
+        setMemberRole(uid, role) {
+          if (!this.can('admin')) return;
+          const current = this.clubMembers[uid];
+          if (current?.role === 'admin' && role !== 'admin' && this.adminCount() <= 1) {
+            alert('A club must have at least one Admin. Promote someone else first.');
             return;
           }
-          this.pendingLevel = level;
-          this.passwordInput = '';
-          this.passwordError = false;
-          this.showPasswordModal = true;
+          set(ref(db, `clubs/${this.activeClubId}/members/${uid}/role`), role);
+          set(ref(db, `users/${uid}/clubs/${this.activeClubId}`), role);
         },
 
-        verifyPassword() {
-          const expected = this.passwords[this.pendingLevel];
-          if (this.passwordInput === expected) {
-            this.accessLevel = this.pendingLevel;
-            this.showPasswordModal = false;
-            this.passwordError = false;
-          } else {
-            this.passwordError = true;
+        removeClubMember(uid) {
+          if (!this.can('admin')) return;
+          const m = this.clubMembers[uid];
+          if (m?.role === 'admin' && this.adminCount() <= 1) {
+            alert('A club must have at least one Admin. Promote someone else before removing this member.');
+            return;
           }
+          if (!confirm(`Remove ${m?.email || 'this member'} from the club?`)) return;
+          set(ref(db, `clubs/${this.activeClubId}/members/${uid}`), null);
+          set(ref(db, `users/${uid}/clubs/${this.activeClubId}`), null);
         },
 
         toggleEditStarting() {
@@ -667,9 +928,37 @@
           return date > this.todayStr;
         },
 
+        categoryClass(cat) {
+          const map = {
+            'Dues': 'bg-purple-500/10 text-purple-400 border-purple-500/30',
+            'Fundraising': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+            'Merchandise': 'bg-blue-500/10 text-blue-400 border-blue-500/30',
+            'Events': 'bg-pink-500/10 text-pink-400 border-pink-500/30',
+            'Equipment': 'bg-amber-500/10 text-amber-400 border-amber-500/30',
+            'Travel': 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30',
+            'Other': 'bg-slate-500/10 text-slate-400 border-slate-500/30'
+          };
+          return map[cat] || map['Other'];
+        },
+
+        getFilteredTransactions() {
+          const q = this.searchQuery.trim().toLowerCase();
+          return this.transactions.filter(t => {
+            const matchesSearch = !q || (t.source + ' ' + (t.notes || '')).toLowerCase().includes(q);
+            const matchesCategory = this.categoryFilter === 'All' || (t.category || 'Other') === this.categoryFilter;
+            return matchesSearch && matchesCategory;
+          });
+        },
+
+        getShortfallWarning() {
+          const data = this.getCalculatedGraphData();
+          const negative = data.find(d => d.balance < 0);
+          return negative ? { date: negative.date, balance: negative.balance } : null;
+        },
+
         getTimelineRows() {
           const groups = {};
-          this.transactions.forEach(t => {
+          this.getFilteredTransactions().forEach(t => {
             if (!groups[t.date]) groups[t.date] = { date: t.date, deposits: [], withdrawals: [] };
             (t.type === 'deposit' ? groups[t.date].deposits : groups[t.date].withdrawals).push(t);
           });
@@ -728,6 +1017,7 @@
         },
 
         formatDate(dateStr) {
+          if (!dateStr) return '';
           const parts = dateStr.split('-');
           if (parts.length !== 3) return dateStr;
           return `${parseInt(parts[1])}/${parseInt(parts[2])}/${parts[0].slice(2)}`;
@@ -899,24 +1189,35 @@
 
         addTransaction() {
           if (!this.newTx.source || !this.newTx.amount || !this.newTx.date) return;
-          this.transactions.push({
-            id: Date.now(),
-            source: this.newTx.source,
-            amount: parseFloat(this.newTx.amount),
-            type: this.newTx.type,
-            date: this.newTx.date,
-            notes: this.newTx.notes
-          });
+          const occurrences = this.newTx.repeatMonthly ? Math.max(2, Math.min(24, parseInt(this.newTx.repeatCount) || 2)) : 1;
+          const groupId = occurrences > 1 ? Date.now() : null;
+          const startDate = new Date(this.newTx.date + 'T00:00:00');
+          for (let i = 0; i < occurrences; i++) {
+            const d = new Date(startDate);
+            d.setMonth(d.getMonth() + i);
+            this.transactions.push({
+              id: Date.now() + i,
+              source: this.newTx.source,
+              amount: parseFloat(this.newTx.amount),
+              type: this.newTx.type,
+              category: this.newTx.category || 'Other',
+              date: d.toISOString().split('T')[0],
+              notes: this.newTx.notes,
+              ...(groupId ? { recurringGroup: groupId } : {})
+            });
+          }
           this.syncToFirebase();
-          this.newTx = { source: '', amount: '', type: 'deposit', date: this.todayStr, notes: '' };
+          this.newTx = { source: '', amount: '', type: 'deposit', date: this.todayStr, notes: '', category: 'Other', repeatMonthly: false, repeatCount: 3 };
           this.showTxForm = false;
         },
 
         deleteTransaction(id) {
           const tx = this.transactions.find(t => t.id === id);
-          if (tx && !confirm(`Delete "${tx.source}" (${tx.type === 'deposit' ? '+' : '-'}$${Number(tx.amount).toFixed(2)})?`)) return;
+          if (!tx) return;
+          const seriesNote = tx.recurringGroup ? ' This is one occurrence of a recurring transaction — only this date will be deleted.' : '';
+          if (!confirm(`Delete "${tx.source}" (${tx.type === 'deposit' ? '+' : '-'}$${Number(tx.amount).toFixed(2)})?${seriesNote}`)) return;
           this.transactions = this.transactions.filter(t => t.id !== id);
-          if (tx && tx.duesFor) {
+          if (tx.duesFor) {
             const m = this.roster.find(m => m.id === tx.duesFor);
             if (m) m.duesPaid = false;
           }
@@ -928,7 +1229,7 @@
           this.editingDues = !this.editingDues;
         },
 
-        // ---------- MEMBERS ----------
+        // ---------- DUES ROSTER (free-text, not login access) ----------
         addMember() {
           if (!this.newMember.name) return;
           this.roster.push({
@@ -952,13 +1253,14 @@
         },
 
         exportCsv() {
-          const rows = [['Date', 'Type', 'Source', 'Amount', 'Status', 'Notes']];
+          const rows = [['Date', 'Type', 'Category', 'Source', 'Amount', 'Status', 'Notes']];
           [...this.transactions]
             .sort((a, b) => new Date(a.date) - new Date(b.date))
             .forEach(t => {
               rows.push([
                 t.date,
                 t.type === 'deposit' ? 'Deposit' : 'Withdrawal',
+                t.category || 'Other',
                 t.source,
                 Number(t.amount).toFixed(2),
                 this.isUpcoming(t.date) ? 'Scheduled' : 'Cleared',
@@ -985,6 +1287,7 @@
               source: `Dues - ${m.name}`,
               amount: Number(this.duesAmount),
               type: 'deposit',
+              category: 'Dues',
               date: this.todayStr,
               notes: 'Membership dues',
               duesFor: m.id
