@@ -55,6 +55,10 @@
         <form x-show="authMode === 'signup'" @submit.prevent="signup()" class="space-y-2.5">
           <p class="text-[11px] text-slate-400 -mt-1 mb-1">Create your personal account. You'll create or join clubs after signing in — you can belong to more than one.</p>
           <div>
+            <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Full Name</label>
+            <input type="text" x-model="authForm.name" required autocomplete="name" class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="Jordan Lee">
+          </div>
+          <div>
             <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Email</label>
             <input type="email" x-model="authForm.email" required autocomplete="username" class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="you@school.edu">
           </div>
@@ -79,9 +83,12 @@
   <div x-show="user && !activeClubId" x-cloak class="flex-1 w-full flex items-start justify-center p-4 pt-10 sm:pt-16">
     <div class="w-full max-w-lg space-y-4">
       <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-lg font-extrabold text-white flex items-center gap-2"><span class="p-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">🛡️</span> Your Clubs</h1>
-          <p class="text-xs text-slate-400 mt-0.5" x-text="user?.email"></p>
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black text-white flex-none" :class="avatarColor(user?.name || user?.email)" x-text="initials(user?.name || user?.email)"></span>
+          <div>
+            <h1 class="text-lg font-extrabold text-white">Your Clubs</h1>
+            <p class="text-xs text-slate-400" x-text="user?.name ? user.name + ' · ' + user.email : user?.email"></p>
+          </div>
         </div>
         <button @click="logout()" class="text-[10px] font-bold text-slate-400 hover:text-rose-400 px-2.5 py-1.5 rounded-lg border border-slate-800 hover:border-rose-500/30 transition">Sign Out</button>
       </div>
@@ -92,7 +99,7 @@
           <p class="text-center py-4 text-slate-600 text-xs italic">You're not in any clubs yet. Create one, or search below to request access.</p>
         </template>
         <template x-for="[clubId, role] in Object.entries(myClubs)" :key="clubId">
-          <button @click="enterClub(clubId)" class="w-full flex items-center justify-between bg-slate-950/70 border border-slate-800 hover:border-emerald-500/40 p-3 rounded-xl transition text-left">
+          <button @click="enterClub(clubId)" class="w-full flex items-center justify-between bg-slate-950/70 border border-slate-800 hover:border-emerald-500/40 hover:bg-slate-900 hover:scale-[1.01] hover:shadow-lg p-3 rounded-xl transition text-left">
             <span class="text-sm font-bold text-white" x-text="clubDirectoryName(clubId)"></span>
             <span class="text-[9px] font-bold px-2 py-0.5 rounded border"
                   :class="role === 'admin' ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : (role === 'officer' ? 'text-blue-400 border-blue-500/30 bg-blue-500/10' : 'text-slate-400 border-slate-700 bg-slate-800/50')"
@@ -175,12 +182,13 @@
 
       <div class="flex items-center gap-2 flex-wrap">
         <div class="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl shadow-inner">
-          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-          <span class="text-xs font-semibold text-slate-300">Signed in as <span x-text="user?.email"></span></span>
-          <span class="text-[9px] font-bold px-2 py-0.5 rounded border"
+          <span class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black text-white flex-none" :class="avatarColor(user?.name || user?.email)" :title="user?.email" x-text="initials(user?.name || user?.email)"></span>
+          <span class="text-xs font-semibold text-slate-300" x-text="user?.name || user?.email"></span>
+          <span class="text-[9px] font-bold px-2 py-0.5 rounded border cursor-help"
                 :class="myRole() === 'admin' ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : (myRole() === 'officer' ? 'text-blue-400 border-blue-500/30 bg-blue-500/10' : 'text-slate-400 border-slate-700 bg-slate-800/50')"
+                :title="myRole() === 'admin' ? 'Admin: full control — settings, dues, members, roles' : (myRole() === 'officer' ? 'Officer: can add/edit transactions, roster, and approve join requests' : 'Viewer: read-only access')"
                 x-text="myRole()"></span>
-          <span x-show="Object.keys(clubJoinRequests).length > 0 && can('officer')" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400" x-text="Object.keys(clubJoinRequests).length + ' pending'"></span>
+          <span x-show="Object.keys(clubJoinRequests).length > 0 && can('officer')" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 animate-pulse" x-text="Object.keys(clubJoinRequests).length + ' pending'"></span>
         </div>
         <button @click="logout()" class="text-[10px] font-bold text-slate-400 hover:text-rose-400 px-2.5 py-1.5 rounded-lg border border-slate-800 hover:border-rose-500/30 transition">Sign Out</button>
       </div>
@@ -221,15 +229,15 @@
         </div>
 
         <div class="grid grid-cols-3 gap-2">
-          <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 shadow-lg border-l-2 border-l-emerald-500">
+          <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 shadow-lg border-l-2 border-l-emerald-500 hover:bg-slate-900 hover:scale-[1.03] hover:shadow-xl transition cursor-default" title="Vault balance including only cleared (past/today) transactions">
             <p class="text-[9px] font-bold uppercase text-slate-400">Current Vault</p>
             <p class="text-base font-black text-white mt-0.5" x-text="'$' + getCurrentBalance().toFixed(2)"></p>
           </div>
-          <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 shadow-lg border-l-2 border-l-blue-500">
+          <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 shadow-lg border-l-2 border-l-blue-500 hover:bg-slate-900 hover:scale-[1.03] hover:shadow-xl transition cursor-default" title="Sum of all cleared deposits">
             <p class="text-[9px] font-bold uppercase text-slate-400">Total Cleared</p>
             <p class="text-base font-black text-white mt-0.5" x-text="'$' + getTotalClearedDeposits().toFixed(2)"></p>
           </div>
-          <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 shadow-lg border-l-2 border-l-amber-500">
+          <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 shadow-lg border-l-2 border-l-amber-500 hover:bg-slate-900 hover:scale-[1.03] hover:shadow-xl transition cursor-default" title="Vault balance including every scheduled transaction">
             <p class="text-[9px] font-bold uppercase text-slate-400">Projected Vault</p>
             <p class="text-base font-black text-amber-400 mt-0.5" x-text="'$' + getProjectedBalance().toFixed(2)"></p>
           </div>
@@ -402,7 +410,7 @@
                        @drop="handleDrop($event, 'deposit', row.date)">
                     <template x-for="item in row.deposits" :key="item.id">
                       <div :draggable="can('officer')" @dragstart="handleDragStart($event, item)"
-                           class="draggable-item bg-slate-900 border p-2 rounded-lg flex items-center justify-between gap-2 shadow-md w-full max-w-[280px]"
+                           class="draggable-item bg-slate-900 border p-2 rounded-lg flex items-center justify-between gap-2 shadow-md w-full max-w-[280px] hover:shadow-xl hover:brightness-110 transition"
                            :class="isUpcoming(item.date) ? 'border-slate-800 bg-slate-900/40 text-slate-400' : 'border-emerald-900/60 text-emerald-300'">
                         <div class="min-w-0">
                           <div class="flex items-center gap-1.5">
@@ -433,7 +441,7 @@
                        @drop="handleDrop($event, 'expense', row.date)">
                     <template x-for="item in row.withdrawals" :key="item.id">
                       <div :draggable="can('officer')" @dragstart="handleDragStart($event, item)"
-                           class="draggable-item bg-slate-900 border p-2 rounded-lg flex items-center justify-between gap-2 shadow-md w-full max-w-[280px]"
+                           class="draggable-item bg-slate-900 border p-2 rounded-lg flex items-center justify-between gap-2 shadow-md w-full max-w-[280px] hover:shadow-xl hover:brightness-110 transition"
                            :class="isUpcoming(item.date) ? 'border-slate-800 bg-slate-900/40 text-slate-400' : 'border-rose-900/60 text-rose-300'">
                         <div class="flex items-center gap-2 flex-none">
                           <button x-show="can('officer')" @click="deleteTransaction(item.id)" class="text-slate-600 hover:text-rose-400 text-xs">✕</button>
@@ -491,11 +499,14 @@
           </template>
 
           <template x-for="member in roster" :key="member.id">
-            <div class="bg-slate-950/70 border border-slate-800 p-2.5 rounded-lg">
+            <div class="bg-slate-950/70 border border-slate-800 hover:border-slate-700 hover:bg-slate-900/70 p-2.5 rounded-lg transition">
               <div class="flex items-center justify-between gap-2">
-                <div class="min-w-0">
-                  <p class="text-xs font-bold text-slate-200 truncate" x-text="member.name"></p>
-                  <p class="text-[9px] text-slate-500 truncate" x-show="member.notes" x-text="member.notes"></p>
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black text-white flex-none" :class="avatarColor(member.name)" x-text="initials(member.name)"></span>
+                  <div class="min-w-0">
+                    <p class="text-xs font-bold text-slate-200 truncate" x-text="member.name"></p>
+                    <p class="text-[9px] text-slate-500 truncate" x-show="member.notes" x-text="member.notes"></p>
+                  </div>
                 </div>
                 <div class="flex items-center gap-2 flex-none">
                   <button :disabled="!can('officer')" @click="toggleDues(member.id)"
@@ -530,11 +541,14 @@
             </template>
             <div class="space-y-1.5">
               <template x-for="[uid, req] in Object.entries(clubJoinRequests)" :key="uid">
-                <div class="flex items-center justify-between bg-slate-950/70 border border-slate-800 p-2 rounded-lg">
-                  <span class="text-[10px] text-slate-300 truncate" x-text="req.email"></span>
+                <div class="flex items-center justify-between bg-slate-950/70 border border-slate-800 hover:border-amber-500/30 p-2 rounded-lg transition gap-2">
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    <span class="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black text-white flex-none" :class="avatarColor(req.name || req.email)" :title="req.email" x-text="initials(req.name || req.email)"></span>
+                    <span class="text-[10px] text-slate-300 truncate" x-text="req.name || req.email"></span>
+                  </div>
                   <div class="flex items-center gap-1.5 flex-none">
-                    <button @click="approveRequest(uid, req.email)" class="text-[9px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-0.5 rounded">Approve</button>
-                    <button @click="denyRequest(uid)" class="text-[9px] font-bold bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white px-2 py-0.5 rounded">Deny</button>
+                    <button @click="approveRequest(uid, req.email, req.name)" class="text-[9px] font-bold bg-emerald-600 hover:bg-emerald-500 hover:scale-105 text-white px-2 py-0.5 rounded transition">Approve</button>
+                    <button @click="denyRequest(uid)" class="text-[9px] font-bold bg-slate-800 hover:bg-rose-600 hover:scale-105 text-slate-300 hover:text-white px-2 py-0.5 rounded transition">Deny</button>
                   </div>
                 </div>
               </template>
@@ -545,15 +559,18 @@
             <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Club Members (login access)</p>
             <div class="space-y-1.5">
               <template x-for="[uid, m] in Object.entries(clubMembers)" :key="uid">
-                <div class="flex items-center justify-between bg-slate-950/70 border border-slate-800 p-2 rounded-lg gap-2">
-                  <span class="text-[10px] text-slate-300 truncate" x-text="m.email"></span>
+                <div class="flex items-center justify-between bg-slate-950/70 border border-slate-800 hover:border-slate-700 p-2 rounded-lg gap-2 transition">
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    <span class="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black text-white flex-none" :class="avatarColor(m.name || m.email)" :title="m.email" x-text="initials(m.name || m.email)"></span>
+                    <span class="text-[10px] text-slate-300 truncate" x-text="m.name || m.email"></span>
+                  </div>
                   <div class="flex items-center gap-1.5 flex-none">
-                    <select :value="m.role" @change="setMemberRole(uid, $event.target.value)" class="bg-slate-900 border border-slate-800 text-[9px] text-slate-300 rounded px-1 py-0.5 focus:outline-none focus:border-blue-500">
+                    <select :value="m.role" @change="setMemberRole(uid, $event.target.value)" class="bg-slate-900 border border-slate-800 text-[9px] text-slate-300 rounded px-1 py-0.5 focus:outline-none focus:border-blue-500" title="Viewer: read-only · Officer: add/edit transactions & members · Admin: full control">
                       <option value="viewer">Viewer</option>
                       <option value="officer">Officer</option>
                       <option value="admin">Admin</option>
                     </select>
-                    <button @click="removeClubMember(uid)" class="text-slate-600 hover:text-rose-400 text-xs">✕</button>
+                    <button @click="removeClubMember(uid)" class="text-slate-600 hover:text-rose-400 text-xs transition">✕</button>
                   </div>
                 </div>
               </template>
@@ -565,6 +582,18 @@
     </div>
 
   </main>
+
+  <!-- TOAST NOTIFICATIONS -->
+  <div class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 items-end pointer-events-none">
+    <template x-for="t in toasts" :key="t.id">
+      <div x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2"
+           x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150"
+           x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+           class="pointer-events-auto max-w-xs px-3.5 py-2 rounded-xl shadow-2xl border text-xs font-semibold backdrop-blur-md"
+           :class="t.tone === 'info' ? 'bg-slate-900/95 border-slate-700 text-slate-300' : 'bg-emerald-600/95 border-emerald-500 text-white'"
+           x-text="t.message"></div>
+    </template>
+  </div>
 
   <!-- APP STATE & FIREBASE ENGINE -->
   <script type="module">
@@ -601,10 +630,11 @@
         clubJoinRequests: {},     // { uid: {email, requestedAt} } for the active club
 
         authMode: 'login',
-        authForm: { email: '', password: '', confirmPassword: '' },
+        authForm: { name: '', email: '', password: '', confirmPassword: '' },
         authError: '',
         authNotice: '',
         authLoading: false,
+        toasts: [],
 
         showCreateClubForm: false,
         newClubForm: { name: '', contactEmail: '' },
@@ -682,11 +712,40 @@
             const data = snap.val() || {};
             this.myClubs = data.clubs || {};
             this.pendingRequests = data.pendingRequests || {};
+            if (this.user) this.user.name = data.name || '';
             Object.keys(this.myClubs).forEach(id => this.resolveClubName(id));
             if (this.activeClubId && !this.myClubs[this.activeClubId]) {
               this.leaveClub();
             }
           });
+        },
+
+        // ---------- HELPERS: IDs, toasts, avatars ----------
+        newId() {
+          if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
+          return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        },
+
+        toast(message, tone = 'success') {
+          const id = this.newId();
+          this.toasts.push({ id, message, tone });
+          setTimeout(() => { this.toasts = this.toasts.filter(t => t.id !== id); }, 3200);
+        },
+
+        initials(name) {
+          if (!name) return '?';
+          const parts = name.trim().split(/\s+/).filter(Boolean);
+          if (parts.length === 0) return '?';
+          if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+          return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        },
+
+        avatarColor(name) {
+          const palette = ['bg-emerald-600', 'bg-blue-600', 'bg-purple-600', 'bg-amber-600', 'bg-pink-600', 'bg-cyan-600', 'bg-indigo-600', 'bg-rose-600'];
+          const str = name || '?';
+          let hash = 0;
+          for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+          return palette[hash % palette.length];
         },
 
         resolveClubName(clubId) {
@@ -778,7 +837,7 @@
           this.authLoading = true;
           try {
             await signInWithEmailAndPassword(auth, this.authForm.email.trim(), this.authForm.password);
-            this.authForm = { email: '', password: '', confirmPassword: '' };
+            this.authForm = { name: '', email: '', password: '', confirmPassword: '' };
           } catch (err) {
             this.authError = this.authErrorMessage(err);
           } finally {
@@ -788,13 +847,14 @@
 
         async signup() {
           this.authError = '';
+          if (!this.authForm.name.trim()) { this.authError = 'Please enter your name.'; return; }
           if (this.authForm.password.length < 6) { this.authError = 'Password must be at least 6 characters.'; return; }
           if (this.authForm.password !== this.authForm.confirmPassword) { this.authError = 'Passwords do not match.'; return; }
           this.authLoading = true;
           try {
             const cred = await createUserWithEmailAndPassword(auth, this.authForm.email.trim(), this.authForm.password);
-            await set(ref(db, `users/${cred.user.uid}/email`), cred.user.email);
-            this.authForm = { email: '', password: '', confirmPassword: '' };
+            await set(ref(db, `users/${cred.user.uid}`), { email: cred.user.email, name: this.authForm.name.trim() });
+            this.authForm = { name: '', email: '', password: '', confirmPassword: '' };
           } catch (err) {
             this.authError = this.authErrorMessage(err);
           } finally {
@@ -831,15 +891,22 @@
               contactEmail: this.newClubForm.contactEmail.trim(),
               createdBy: this.user.uid,
               createdAt: new Date().toISOString(),
-              members: { [this.user.uid]: { role: 'admin', email: this.user.email } },
-              financeData: { startingBalance: 0, duesAmount: 50, transactions: [], roster: [] }
+              members: { [this.user.uid]: { role: 'admin', email: this.user.email, name: this.user.name || this.user.email } },
+              financeData: {
+                startingBalance: 0,
+                duesAmount: 50,
+                transactions: [],
+                roster: [{ id: this.newId(), name: this.user.name || this.user.email, role: 'Admin', notes: '', duesPaid: false }]
+              }
             });
             await set(ref(db, `clubDirectory/${clubId}`), { name: this.newClubForm.name.trim() });
             await set(ref(db, `users/${this.user.uid}/clubs/${clubId}`), 'admin');
             this.clubDirectoryCache = { ...this.clubDirectoryCache, [clubId]: this.newClubForm.name.trim() };
+            const createdName = this.newClubForm.name.trim();
             this.newClubForm = { name: '', contactEmail: '' };
             this.showCreateClubForm = false;
             this.enterClub(clubId);
+            this.toast(`${createdName} created — you're the Admin`);
           } catch (err) {
             this.clubFormError = this.authErrorMessage(err);
           } finally {
@@ -861,22 +928,30 @@
 
         async requestToJoin(clubId, clubName) {
           if (this.myClubs[clubId] || this.pendingRequests[clubId]) return;
-          await set(ref(db, `clubs/${clubId}/joinRequests/${this.user.uid}`), { email: this.user.email, requestedAt: new Date().toISOString() });
+          await set(ref(db, `clubs/${clubId}/joinRequests/${this.user.uid}`), { email: this.user.email, name: this.user.name || this.user.email, requestedAt: new Date().toISOString() });
           await set(ref(db, `users/${this.user.uid}/pendingRequests/${clubId}`), clubName);
+          this.toast(`Request sent to ${clubName}`);
         },
 
         async cancelRequest(clubId) {
           await set(ref(db, `clubs/${clubId}/joinRequests/${this.user.uid}`), null);
           await set(ref(db, `users/${this.user.uid}/pendingRequests/${clubId}`), null);
+          this.toast('Request cancelled', 'info');
         },
 
-        async approveRequest(uid, email) {
+        async approveRequest(uid, email, name) {
           if (!this.can('officer')) return;
           const clubId = this.activeClubId;
-          await set(ref(db, `clubs/${clubId}/members/${uid}`), { role: 'viewer', email });
+          const displayName = name || email;
+          await set(ref(db, `clubs/${clubId}/members/${uid}`), { role: 'viewer', email, name: displayName });
           await set(ref(db, `users/${uid}/clubs/${clubId}`), 'viewer');
           await set(ref(db, `clubs/${clubId}/joinRequests/${uid}`), null);
           await set(ref(db, `users/${uid}/pendingRequests/${clubId}`), null);
+          if (!this.roster.some(m => m.name === displayName)) {
+            this.roster.push({ id: this.newId(), name: displayName, role: 'Viewer', notes: '', duesPaid: false });
+            this.syncToFirebase();
+          }
+          this.toast(`${displayName} approved as Viewer`);
         },
 
         async denyRequest(uid) {
@@ -884,6 +959,7 @@
           const clubId = this.activeClubId;
           await set(ref(db, `clubs/${clubId}/joinRequests/${uid}`), null);
           await set(ref(db, `users/${uid}/pendingRequests/${clubId}`), null);
+          this.toast('Request denied', 'info');
         },
 
         adminCount() {
@@ -899,6 +975,7 @@
           }
           set(ref(db, `clubs/${this.activeClubId}/members/${uid}/role`), role);
           set(ref(db, `users/${uid}/clubs/${this.activeClubId}`), role);
+          this.toast(`${current?.name || current?.email || 'Member'} is now ${role}`);
         },
 
         removeClubMember(uid) {
@@ -908,9 +985,10 @@
             alert('A club must have at least one Admin. Promote someone else before removing this member.');
             return;
           }
-          if (!confirm(`Remove ${m?.email || 'this member'} from the club?`)) return;
+          if (!confirm(`Remove ${m?.name || m?.email || 'this member'} from the club?`)) return;
           set(ref(db, `clubs/${this.activeClubId}/members/${uid}`), null);
           set(ref(db, `users/${uid}/clubs/${this.activeClubId}`), null);
+          this.toast(`${m?.name || m?.email || 'Member'} removed`, 'info');
         },
 
         toggleEditStarting() {
@@ -1190,13 +1268,13 @@
         addTransaction() {
           if (!this.newTx.source || !this.newTx.amount || !this.newTx.date) return;
           const occurrences = this.newTx.repeatMonthly ? Math.max(2, Math.min(24, parseInt(this.newTx.repeatCount) || 2)) : 1;
-          const groupId = occurrences > 1 ? Date.now() : null;
+          const groupId = occurrences > 1 ? this.newId() : null;
           const startDate = new Date(this.newTx.date + 'T00:00:00');
           for (let i = 0; i < occurrences; i++) {
             const d = new Date(startDate);
             d.setMonth(d.getMonth() + i);
             this.transactions.push({
-              id: Date.now() + i,
+              id: this.newId(),
               source: this.newTx.source,
               amount: parseFloat(this.newTx.amount),
               type: this.newTx.type,
@@ -1209,6 +1287,7 @@
           this.syncToFirebase();
           this.newTx = { source: '', amount: '', type: 'deposit', date: this.todayStr, notes: '', category: 'Other', repeatMonthly: false, repeatCount: 3 };
           this.showTxForm = false;
+          this.toast(occurrences > 1 ? `${occurrences} recurring transactions added` : 'Transaction added');
         },
 
         deleteTransaction(id) {
@@ -1222,6 +1301,7 @@
             if (m) m.duesPaid = false;
           }
           this.syncToFirebase();
+          this.toast('Transaction deleted', 'info');
         },
 
         toggleEditDues() {
@@ -1233,15 +1313,17 @@
         addMember() {
           if (!this.newMember.name) return;
           this.roster.push({
-            id: Date.now(),
+            id: this.newId(),
             name: this.newMember.name,
             role: this.newMember.role,
             notes: this.newMember.notes,
             duesPaid: false
           });
           this.syncToFirebase();
+          const addedName = this.newMember.name;
           this.newMember = { name: '', role: 'Viewer', notes: '' };
           this.showMemberForm = false;
+          this.toast(`${addedName} added to roster`);
         },
 
         removeMember(id) {
@@ -1250,6 +1332,7 @@
           this.roster = this.roster.filter(m => m.id !== id);
           this.transactions = this.transactions.filter(t => t.duesFor !== id);
           this.syncToFirebase();
+          this.toast(`${m?.name || 'Member'} removed`, 'info');
         },
 
         exportCsv() {
@@ -1275,6 +1358,7 @@
           a.download = `${(this.clubName || 'club').replace(/[^a-z0-9]+/gi, '_')}_transactions_${this.todayStr}.csv`;
           a.click();
           URL.revokeObjectURL(url);
+          this.toast('CSV exported', 'info');
         },
 
         toggleDues(id) {
@@ -1283,7 +1367,7 @@
           m.duesPaid = !m.duesPaid;
           if (m.duesPaid) {
             this.transactions.push({
-              id: Date.now(),
+              id: this.newId(),
               source: `Dues - ${m.name}`,
               amount: Number(this.duesAmount),
               type: 'deposit',
@@ -1296,6 +1380,7 @@
             this.transactions = this.transactions.filter(t => t.duesFor !== m.id);
           }
           this.syncToFirebase();
+          this.toast(`${m.name} marked ${m.duesPaid ? 'paid' : 'unpaid'}`);
         }
       }
     }
