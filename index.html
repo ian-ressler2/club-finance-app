@@ -4,10 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Club Financial Hub</title>
-  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Alpine.js for State Management -->
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
     [x-cloak] { display: none !important; }
     ::-webkit-scrollbar { height: 6px; width: 6px; }
@@ -16,59 +13,118 @@
     ::-webkit-scrollbar-thumb:hover { background: #334155; }
     .draggable-item { cursor: grab; }
     .draggable-item:active { cursor: grabbing; }
+    .drop-zone-active { background-color: rgba(16, 185, 129, 0.06); }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 h-screen w-screen overflow-hidden flex flex-col font-sans antialiased" x-data="financeApp()" x-cloak>
+<body class="bg-slate-950 text-slate-100 min-h-screen w-screen flex flex-col font-sans antialiased" x-data="financeApp()" x-cloak>
 
-  <!-- TOP HEADER -->
-  <header class="border-b border-slate-800/80 bg-slate-900/80 backdrop-blur-md px-6 py-2.5 flex-none">
-    <div class="w-full flex items-center justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <h1 class="text-lg font-extrabold tracking-tight text-white flex items-center gap-2">
-          <span class="p-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">🛡️</span> Executive Financial Hub
-        </h1>
-        <span class="text-[11px] bg-slate-800/80 text-slate-300 px-2.5 py-0.5 rounded-full border border-slate-700/50 font-medium">Responsive View</span>
+  <!-- AUTH GATE -->
+  <div x-show="!user" x-cloak class="flex-1 w-full flex items-center justify-center p-4">
+    <div class="w-full max-w-sm">
+      <div class="text-center mb-6">
+        <span class="inline-block p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-2xl mb-3">🛡️</span>
+        <h1 class="text-xl font-extrabold text-white">Club Financial Hub</h1>
+        <p class="text-xs text-slate-400 mt-1">Track dues, deposits, and withdrawals for your college club.</p>
       </div>
 
-      <!-- BOARD-LEVEL ACCESS WITH PASSWORD SECURITY -->
-      <div class="flex items-center gap-3 bg-slate-900 border border-slate-800 px-3 py-1 rounded-xl shadow-inner">
-        <div class="flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full" :class="isAdmin ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'"></span>
-          <span class="text-xs font-semibold text-slate-300" x-text="isAdmin ? 'Admin Mode (Active)' : 'Read-Only Mode'"></span>
+      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-2xl">
+        <div class="flex gap-1 bg-slate-950 border border-slate-800 rounded-xl p-1 mb-4">
+          <button type="button" @click="authMode = 'login'; authError = ''" class="flex-1 text-xs font-bold py-1.5 rounded-lg transition" :class="authMode === 'login' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-slate-200'">Log In</button>
+          <button type="button" @click="authMode = 'register'; authError = ''" class="flex-1 text-xs font-bold py-1.5 rounded-lg transition" :class="authMode === 'register' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-slate-200'">Create a Club</button>
         </div>
-        <button 
-          @click="toggleAdminPrompt()"
-          class="relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none"
-          :class="isAdmin ? 'bg-emerald-500' : 'bg-slate-700'"
-        >
-          <span class="inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform"
-                :class="isAdmin ? 'translate-x-5' : 'translate-x-1'"></span>
-        </button>
+
+        <!-- LOGIN FORM -->
+        <form x-show="authMode === 'login'" @submit.prevent="login()" class="space-y-2.5">
+          <div>
+            <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Email</label>
+            <input type="email" x-model="authForm.email" required autocomplete="username" class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="treasurer@club.edu">
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Password</label>
+            <input type="password" x-model="authForm.password" required autocomplete="current-password" class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="••••••••">
+          </div>
+          <p x-show="authError" class="text-[11px] text-rose-400" x-text="authError"></p>
+          <p x-show="authNotice" class="text-[11px] text-emerald-400" x-text="authNotice"></p>
+          <button type="submit" :disabled="authLoading" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-bold py-2 rounded-lg transition mt-1">
+            <span x-text="authLoading ? 'Signing in…' : 'Log In'"></span>
+          </button>
+          <button type="button" @click="forgotPassword()" class="w-full text-[10px] text-slate-500 hover:text-slate-300 hover:underline text-center pt-1">Forgot password?</button>
+        </form>
+
+        <!-- REGISTER FORM -->
+        <form x-show="authMode === 'register'" @submit.prevent="registerClub()" class="space-y-2.5">
+          <div>
+            <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Club Name</label>
+            <input type="text" x-model="authForm.clubName" required class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="Swim Club">
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Email</label>
+            <input type="email" x-model="authForm.email" required autocomplete="username" class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="treasurer@club.edu">
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Password</label>
+            <input type="password" x-model="authForm.password" required minlength="6" autocomplete="new-password" class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="At least 6 characters">
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Confirm Password</label>
+            <input type="password" x-model="authForm.confirmPassword" required autocomplete="new-password" class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="••••••••">
+          </div>
+          <p x-show="authError" class="text-[11px] text-rose-400" x-text="authError"></p>
+          <button type="submit" :disabled="authLoading" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-bold py-2 rounded-lg transition mt-1">
+            <span x-text="authLoading ? 'Creating club…' : 'Create Club'"></span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOP HEADER -->
+  <header x-show="user" class="border-b border-slate-800/80 bg-slate-900/80 backdrop-blur-md px-6 py-2.5 flex-none sticky top-0 z-40">
+    <div class="w-full flex items-center justify-between gap-4 flex-wrap">
+      <div class="flex items-center gap-3">
+        <h1 class="text-lg font-extrabold tracking-tight text-white flex items-center gap-2">
+          <span class="p-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">🛡️</span> <span x-text="clubName || 'Club Financial Hub'"></span>
+        </h1>
+      </div>
+
+      <div class="flex items-center gap-2 flex-wrap">
+        <!-- ACCESS LEVEL CONTROL -->
+        <div class="flex items-center gap-3 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl shadow-inner">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full" :class="accessLevel !== 'viewer' ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'"></span>
+            <span class="text-xs font-semibold text-slate-300" x-text="accessLabel()"></span>
+          </div>
+          <div class="flex gap-1">
+            <button @click="requestAccess('viewer')" class="text-[10px] font-bold px-2 py-1 rounded-lg transition" :class="accessLevel==='viewer' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'">Viewer</button>
+            <button @click="requestAccess('officer')" class="text-[10px] font-bold px-2 py-1 rounded-lg transition" :class="accessLevel==='officer' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-300'">Officer</button>
+            <button @click="requestAccess('admin')" class="text-[10px] font-bold px-2 py-1 rounded-lg transition" :class="accessLevel==='admin' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-slate-300'">Admin</button>
+          </div>
+        </div>
+        <button @click="logout()" class="text-[10px] font-bold text-slate-400 hover:text-rose-400 px-2.5 py-1.5 rounded-lg border border-slate-800 hover:border-rose-500/30 transition">Sign Out</button>
       </div>
     </div>
   </header>
 
-  <!-- RESPONSIVE DASHBOARD LAYOUT ENGINE -->
-  <main class="flex-1 w-full p-4 min-h-0 grid grid-rows-[auto_1fr] gap-4">
+  <!-- MAIN LAYOUT -->
+  <main x-show="user" class="flex-1 w-full p-4 grid grid-rows-[auto_auto_1fr] gap-4 max-w-[1600px] mx-auto">
 
-    <!-- TOP SECTION: STAT METRICS & HIGH-PRECISION AXIS GRAPH ROW -->
+    <!-- TOP SECTION: STAT METRICS & GRAPH -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch flex-none">
-      
-      <!-- LEFT: STAT CARDS & INITIALIZATION (4 cols) -->
+
+      <!-- LEFT: STAT CARDS -->
       <div class="lg:col-span-4 flex flex-col justify-between gap-2.5">
-        
-        <!-- Base Starting Vault Input Card -->
+
         <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3 shadow-lg">
           <div class="flex justify-between items-center">
             <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Vault Starting Base</span>
-            <button x-show="isAdmin" @click="toggleEditStarting()" class="text-[10px] text-emerald-400 hover:underline">
-              <span x-text="editingStarting ? 'Done' : 'Set Vault'"></span>
+            <button x-show="can('admin')" @click="toggleEditStarting()" class="text-[10px] text-emerald-400 hover:underline">
+              <span x-text="editingStarting ? 'Done' : 'Edit'"></span>
             </button>
           </div>
           <template x-if="!editingStarting">
             <p class="text-xl font-black text-white mt-0.5" x-text="'$' + Number(startingBalance).toFixed(2)"></p>
           </template>
-          <template x-if="editingStarting && isAdmin">
+          <template x-if="editingStarting && can('admin')">
             <div class="flex items-center gap-2 mt-1">
               <span class="text-slate-400 text-xs font-bold">$</span>
               <input type="number" step="0.01" x-model.number="startingBalance" @change="syncToFirebase()" class="bg-slate-950 border border-slate-700 text-xs text-white px-2 py-0.5 rounded w-full focus:outline-none focus:border-emerald-500">
@@ -76,133 +132,65 @@
           </template>
         </div>
 
-        <!-- Dynamic Summary Grid -->
         <div class="grid grid-cols-3 gap-2">
           <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 shadow-lg border-l-2 border-l-emerald-500">
             <p class="text-[9px] font-bold uppercase text-slate-400">Current Vault</p>
             <p class="text-base font-black text-white mt-0.5" x-text="'$' + getCurrentBalance().toFixed(2)"></p>
           </div>
-
           <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 shadow-lg border-l-2 border-l-blue-500">
             <p class="text-[9px] font-bold uppercase text-slate-400">Total Cleared</p>
             <p class="text-base font-black text-white mt-0.5" x-text="'$' + getTotalClearedDeposits().toFixed(2)"></p>
           </div>
-
           <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 shadow-lg border-l-2 border-l-amber-500">
             <p class="text-[9px] font-bold uppercase text-slate-400">Projected Vault</p>
             <p class="text-base font-black text-amber-400 mt-0.5" x-text="'$' + getProjectedBalance().toFixed(2)"></p>
           </div>
         </div>
 
-        <!-- Quick Action Controller -->
         <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 shadow-lg flex items-center justify-between">
           <span class="text-xs font-semibold text-slate-300">Quick Actions</span>
           <div class="flex gap-2">
-            <button 
-              x-show="isAdmin" 
-              @click="showTxForm = !showTxForm" 
-              class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-lg transition shadow-md"
-            >
-              + Entry
+            <button x-show="can('officer')" @click="openTxForm()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-lg transition shadow-md">
+              + Transaction
             </button>
-            <button 
-              x-show="isAdmin" 
-              @click="showMemberForm = !showMemberForm" 
-              class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-lg transition shadow-md"
-            >
+            <button x-show="can('officer')" @click="showMemberForm = !showMemberForm" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-lg transition shadow-md">
               + Member
+            </button>
+            <button @click="exportCsv()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-3 py-1 rounded-lg transition shadow-md">
+              ⬇ Export
             </button>
           </div>
         </div>
 
       </div>
 
-      <!-- RIGHT: PROJECTION GRAPH WITH FULL VISIBLE AXES & LABELS (8 cols) -->
+      <!-- RIGHT: GRAPH -->
       <div class="lg:col-span-8 bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 shadow-lg flex flex-col justify-between">
         <div class="flex justify-between items-center mb-1">
-          <div>
-            <h2 class="text-xs font-bold text-white flex items-center gap-2">📈 High-Precision Balance Projection</h2>
-          </div>
+          <h2 class="text-xs font-bold text-white flex items-center gap-2">📈 Balance Over Time</h2>
           <div class="flex items-center gap-3 text-[10px]">
             <span class="flex items-center gap-1 text-emerald-400"><span class="w-2.5 h-0.5 bg-emerald-400 inline-block"></span> Cleared</span>
-            <span class="flex items-center gap-1 text-slate-400"><span class="w-2.5 h-0.5 border-b border-dashed border-slate-400 inline-block"></span> Future</span>
-            <span class="flex items-center gap-1 text-cyan-400"><span class="w-2.5 h-0.5 border-b border-dashed border-cyan-400 inline-block"></span> Today Line</span>
+            <span class="flex items-center gap-1 text-slate-400"><span class="w-2.5 h-0.5 border-b border-dashed border-slate-400 inline-block"></span> Scheduled</span>
+            <span class="flex items-center gap-1 text-cyan-400"><span class="w-2.5 h-0.5 border-b border-dashed border-cyan-400 inline-block"></span> Today</span>
           </div>
         </div>
 
-        <!-- SVG Container with Dedicated Margin Spacing for Outer Axes -->
         <div class="relative bg-slate-950 border border-slate-800 rounded-xl p-1 h-48 w-full overflow-hidden">
           <div class="w-full h-full relative">
-            <svg viewBox="0 0 800 220" class="w-full h-full overflow-visible">
-              <defs>
-                <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="#10b981" stop-opacity="0.25"/>
-                  <stop offset="100%" stop-color="#10b981" stop-opacity="0.0"/>
-                </linearGradient>
-              </defs>
+            <div class="w-full h-full" x-html="renderChartSvg()"></div>
 
-              <!-- AXIS LINES -->
-              <line x1="85" y1="20" x2="85" y2="175" stroke="#475569" stroke-width="2" />
-              <line x1="85" y1="175" x2="775" y2="175" stroke="#475569" stroke-width="2" />
+            <!-- interactive hover dots, positioned as % over the chart -->
+            <template x-for="(pt, idx) in getGraphPoints()" :key="idx">
+              <div
+                class="absolute rounded-full cursor-pointer transition-all border-2 border-slate-950"
+                :class="pt.data.status === 'upcoming' ? 'bg-slate-400' : 'bg-emerald-400'"
+                :style="'left:' + (pt.x/8) + '%; top:' + (pt.y/2.2) + '%; width:' + (hoveredPoint && hoveredPoint.index === idx ? 13 : 8) + 'px; height:' + (hoveredPoint && hoveredPoint.index === idx ? 13 : 8) + 'px; transform: translate(-50%,-50%);'"
+                @mouseenter="hoveredPoint = { index: idx, ...pt.data }"
+                @mouseleave="hoveredPoint = null"
+              ></div>
+            </template>
 
-              <!-- Y-AXIS LABELS & GRID -->
-              <template x-for="yTick in getYScales()" :key="yTick.val">
-                <g>
-                  <line x1="85" :y1="yTick.y" x2="775" :y2="yTick.y" stroke="#1e293b" stroke-dasharray="3 3" />
-                  <line x1="79" :y1="yTick.y" x2="85" :y2="yTick.y" stroke="#94a3b8" stroke-width="1.5" />
-                  <text x="74" :y="yTick.y + 4" fill="#cbd5e1" font-size="10" text-anchor="end" font-weight="700" x-text="'$' + yTick.val.toLocaleString()"></text>
-                </g>
-              </template>
-
-              <!-- X-AXIS LABELS -->
-              <template x-for="xTick in getXScales()" :key="xTick.date">
-                <g>
-                  <line :x1="xTick.x" y1="175" :x2="xTick.x" y2="181" stroke="#94a3b8" stroke-width="1.5" />
-                  <text :x="xTick.x" y="196" fill="#cbd5e1" font-size="10" font-weight="700" text-anchor="middle" x-text="xTick.dateStr"></text>
-                </g>
-              </template>
-
-              <!-- GRADIENT FILL -->
-              <template x-if="timelineData.length > 0">
-                <path :d="generateGraphAreaPath()" fill="url(#chartGradient)" />
-              </template>
-
-              <!-- CLEARED & FUTURE PATHS -->
-              <template x-if="timelineData.length > 0">
-                <path :d="generateGraphPath('cleared')" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-              </template>
-              
-              <template x-if="timelineData.length > 0">
-                <path :d="generateGraphPath('future')" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round" />
-              </template>
-
-              <!-- TODAY LINE -->
-              <template x-if="timelineData.length > 0 && getTodayXPosition()">
-                <g>
-                  <line :x1="getTodayXPosition()" y1="20" :x2="getTodayXPosition()" y2="175" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="4 3" />
-                  <text :x="getTodayXPosition()" y="15" fill="#22d3ee" font-size="8" font-weight="900" text-anchor="middle">TODAY</text>
-                </g>
-              </template>
-
-              <!-- DATA POINTS -->
-              <template x-for="(pt, idx) in getGraphPoints()" :key="idx">
-                <circle
-                  :cx="pt.x"
-                  :cy="pt.y"
-                  :r="hoveredPoint && hoveredPoint.index === idx ? 6.5 : 4"
-                  :class="pt.data.status === 'upcoming' ? 'fill-slate-400 stroke-slate-950' : 'fill-emerald-400 stroke-slate-950'"
-                  class="stroke-2 cursor-pointer transition-all"
-                  @mouseenter="hoveredPoint = { index: idx, ...pt.data }"
-                  @mouseleave="hoveredPoint = null"
-                />
-              </template>
-            </svg>
-
-            <!-- HOVER TOOLTIP -->
-            <div 
-              x-show="hoveredPoint" 
-              class="absolute top-2 right-2 bg-slate-900/95 border border-slate-700 px-3 py-1.5 rounded-xl shadow-2xl text-xs space-y-0.5 backdrop-blur-md z-30 pointer-events-none"
-            >
+            <div x-show="hoveredPoint" class="absolute top-2 right-2 bg-slate-900/95 border border-slate-700 px-3 py-1.5 rounded-xl shadow-2xl text-xs space-y-0.5 backdrop-blur-md z-30 pointer-events-none">
               <p class="font-bold" :class="hoveredPoint?.status === 'upcoming' ? 'text-slate-400' : 'text-emerald-400'" x-text="hoveredPoint?.source + ' (' + hoveredPoint?.amount + ')'"></p>
               <p class="text-slate-200">Vault Balance: <span class="font-black text-white" x-text="'$' + hoveredPoint?.balance"></span></p>
               <p class="text-[10px] text-slate-400" x-text="'Date: ' + hoveredPoint?.date + ' | Status: ' + hoveredPoint?.status"></p>
@@ -210,24 +198,20 @@
           </div>
         </div>
       </div>
-
     </div>
 
     <!-- ADMIN INPUT FORMS -->
-    <div x-show="showTxForm && isAdmin" x-transition class="bg-slate-900 border border-slate-800 p-3 rounded-xl space-y-2 flex-none">
-      <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Log Transaction / Future Projection</h3>
+    <div x-show="showTxForm && can('officer')" x-transition class="bg-slate-900 border border-slate-800 p-3 rounded-xl space-y-2 flex-none">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Log Transaction (past, today, or scheduled)</h3>
       <form @submit.prevent="addTransaction()" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
         <input type="text" placeholder="Title / Source" x-model="newTx.source" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500" required>
-        <input type="number" step="0.01" placeholder="Amount ($)" x-model="newTx.amount" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500" required>
+        <input type="number" step="0.01" min="0" placeholder="Amount ($)" x-model="newTx.amount" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500" required>
         <select x-model="newTx.type" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500">
-          <option value="deposit">Deposit (Left Side)</option>
-          <option value="expense">Withdrawal (Right Side)</option>
-        </select>
-        <select x-model="newTx.status" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500">
-          <option value="cleared">Cleared (Past/Current)</option>
-          <option value="upcoming">Upcoming (Future Projection)</option>
+          <option value="deposit">Deposit</option>
+          <option value="expense">Withdrawal</option>
         </select>
         <input type="date" x-model="newTx.date" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500" required>
+        <input type="text" placeholder="Notes (optional)" x-model="newTx.notes" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500">
         <div class="lg:col-span-5 flex justify-end gap-2 pt-1">
           <button type="button" @click="showTxForm = false" class="text-xs text-slate-400 hover:text-white px-2">Cancel</button>
           <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-lg">Save</button>
@@ -235,10 +219,15 @@
       </form>
     </div>
 
-    <div x-show="showMemberForm && isAdmin" x-transition class="bg-slate-900 border border-slate-800 p-3 rounded-xl space-y-2 flex-none">
+    <div x-show="showMemberForm && can('officer')" x-transition class="bg-slate-900 border border-slate-800 p-3 rounded-xl space-y-2 flex-none">
       <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Add Member</h3>
-      <form @submit.prevent="addMember()" class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <form @submit.prevent="addMember()" class="grid grid-cols-1 sm:grid-cols-4 gap-2">
         <input type="text" placeholder="Full Name" x-model="newMember.name" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-500" required>
+        <select x-model="newMember.role" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-500">
+          <option value="Viewer">Viewer</option>
+          <option value="Officer">Officer</option>
+          <option value="Admin">Admin</option>
+        </select>
         <input type="text" placeholder="Notes" x-model="newMember.notes" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-500">
         <div class="flex gap-2">
           <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-1.5 rounded-lg">Enlist</button>
@@ -247,156 +236,179 @@
       </form>
     </div>
 
-    <!-- LOWER SECTION: T-ACCOUNT TIMELINE & ROSTER -->
+    <!-- LOWER SECTION: VERTICAL TIMELINE & ROSTER -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch min-h-0">
-      
-      <!-- INTERACTIVE T-ACCOUNT TIMELINE (8 cols) -->
+
+      <!-- VERTICAL T-TIMELINE (8 cols) -->
       <div class="lg:col-span-8 bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 shadow-lg flex flex-col min-h-0">
         <div class="flex justify-between items-center mb-2 flex-none">
           <div>
-            <h2 class="text-xs font-bold text-white flex items-center gap-2">⚖️ Interactive T-Account Timeline (Drag & Drop Items)</h2>
-            <p class="text-[10px] text-slate-400">Left: Green Deposits | Right: Red Withdrawals | Grey: Future Projections</p>
+            <h2 class="text-xs font-bold text-white flex items-center gap-2">⚖️ Vertical Timeline (Drag cards to a new date row)</h2>
+            <p class="text-[10px] text-slate-400">Left = Deposits · Right = Withdrawals · Drop on a row's side to move date &amp; type</p>
           </div>
-          <span class="text-[10px] text-slate-500 font-mono" x-text="timelineData.length + ' items'"></span>
+          <span class="text-[10px] text-slate-500 font-mono" x-text="transactions.length + ' items'"></span>
         </div>
 
-        <!-- Dynamic T-Chart Containers -->
-        <div class="grid grid-cols-2 gap-0 border border-slate-800 rounded-xl flex-1 min-h-0 relative bg-slate-950/60">
-          
-          <div class="absolute inset-y-0 left-1/2 w-0 border-r-2 border-dashed border-slate-800 z-10 pointer-events-none"></div>
+        <div class="relative flex-1 min-h-0 overflow-y-auto border border-slate-800 rounded-xl bg-slate-950/60 px-2 py-3">
+          <!-- center spine -->
+          <div class="absolute inset-y-0 left-1/2 w-0 border-r-2 border-dashed border-slate-800 pointer-events-none"></div>
 
-          <!-- LEFT COLUMN: DEPOSITS (+) -->
-          <div 
-            class="p-3 overflow-y-auto space-y-2 pr-4 h-full"
-            @dragover.prevent
-            @drop="handleDrop($event, 'deposit')"
-          >
-            <div class="sticky top-0 bg-slate-950 py-1 text-center border-b border-emerald-900/40 text-[11px] font-black text-emerald-400 uppercase tracking-wider mb-2 z-20">
-              Deposits (+)
+          <template x-if="transactions.length === 0">
+            <div class="text-center py-10 text-slate-600 text-[11px] italic">No transactions yet. Use "+ Transaction" to log or schedule one.</div>
+          </template>
+
+          <template x-for="row in getTimelineRows()" :key="row.kind === 'today' ? 'today-marker' : row.date">
+            <div>
+              <!-- TODAY MARKER -->
+              <template x-if="row.kind === 'today'">
+                <div class="relative flex items-center my-2 z-10"
+                     @dragover.prevent="dragHoverKey = 'today'"
+                     @drop="handleDrop($event, 'deposit', todayStr)">
+                  <div class="flex-1 border-t border-dashed border-cyan-500/50"></div>
+                  <span class="mx-2 text-[9px] font-black text-cyan-400 bg-cyan-500/10 border border-cyan-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider">Today · <span x-text="formatDate(todayStr)"></span></span>
+                  <div class="flex-1 border-t border-dashed border-cyan-500/50"></div>
+                </div>
+              </template>
+
+              <!-- DATE ROW -->
+              <template x-if="row.kind === 'group'">
+                <div class="grid grid-cols-2 gap-0 py-1.5">
+                  <!-- LEFT: deposits for this date -->
+                  <div class="pr-4 space-y-1.5 min-h-[2.25rem] flex flex-col items-end rounded-lg transition"
+                       :class="dragHoverKey === row.date + '-deposit' ? 'drop-zone-active' : ''"
+                       @dragover.prevent="dragHoverKey = row.date + '-deposit'"
+                       @dragleave="dragHoverKey = null"
+                       @drop="handleDrop($event, 'deposit', row.date)">
+                    <template x-for="item in row.deposits" :key="item.id">
+                      <div :draggable="can('officer')" @dragstart="handleDragStart($event, item)"
+                           class="draggable-item bg-slate-900 border p-2 rounded-lg flex items-center justify-between gap-2 shadow-md w-full max-w-[280px]"
+                           :class="isUpcoming(item.date) ? 'border-slate-800 bg-slate-900/40 text-slate-400' : 'border-emerald-900/60 text-emerald-300'">
+                        <div class="min-w-0">
+                          <div class="flex items-center gap-1.5">
+                            <span class="text-xs font-bold text-white truncate" x-text="item.source"></span>
+                            <span x-show="item.duesFor" class="text-[8px] bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded border border-purple-500/30 flex-none">Dues</span>
+                            <span x-show="isUpcoming(item.date)" class="text-[8px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700 flex-none">Scheduled</span>
+                          </div>
+                          <p class="text-[9px] text-slate-500 truncate" x-show="item.notes" x-text="item.notes"></p>
+                        </div>
+                        <div class="flex items-center gap-2 flex-none">
+                          <span class="text-xs font-bold font-mono" :class="isUpcoming(item.date) ? 'text-slate-400' : 'text-emerald-400'" x-text="'+$' + Number(item.amount).toFixed(2)"></span>
+                          <button x-show="can('officer')" @click="deleteTransaction(item.id)" class="text-slate-600 hover:text-rose-400 text-xs">✕</button>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+
+                  <!-- CENTER DATE LABEL -->
+                  <div class="hidden"></div>
+
+                  <!-- RIGHT: withdrawals for this date -->
+                  <div class="pl-4 space-y-1.5 min-h-[2.25rem] flex flex-col items-start rounded-lg transition"
+                       :class="dragHoverKey === row.date + '-expense' ? 'drop-zone-active' : ''"
+                       @dragover.prevent="dragHoverKey = row.date + '-expense'"
+                       @dragleave="dragHoverKey = null"
+                       @drop="handleDrop($event, 'expense', row.date)">
+                    <template x-for="item in row.withdrawals" :key="item.id">
+                      <div :draggable="can('officer')" @dragstart="handleDragStart($event, item)"
+                           class="draggable-item bg-slate-900 border p-2 rounded-lg flex items-center justify-between gap-2 shadow-md w-full max-w-[280px]"
+                           :class="isUpcoming(item.date) ? 'border-slate-800 bg-slate-900/40 text-slate-400' : 'border-rose-900/60 text-rose-300'">
+                        <div class="flex items-center gap-2 flex-none">
+                          <button x-show="can('officer')" @click="deleteTransaction(item.id)" class="text-slate-600 hover:text-rose-400 text-xs">✕</button>
+                          <span class="text-xs font-bold font-mono" :class="isUpcoming(item.date) ? 'text-slate-400' : 'text-rose-400'" x-text="'-$' + Number(item.amount).toFixed(2)"></span>
+                        </div>
+                        <div class="min-w-0 text-right">
+                          <div class="flex items-center gap-1.5 justify-end">
+                            <span x-show="isUpcoming(item.date)" class="text-[8px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700 flex-none">Scheduled</span>
+                            <span class="text-xs font-bold text-white truncate" x-text="item.source"></span>
+                          </div>
+                          <p class="text-[9px] text-slate-500 truncate" x-show="item.notes" x-text="item.notes"></p>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 -mt-1 mb-0.5">
+                  <div class="flex-1"></div>
+                  <span class="text-[9px] font-bold text-slate-500 bg-slate-950 px-1.5" x-text="formatDate(row.date)"></span>
+                  <div class="flex-1"></div>
+                </div>
+              </template>
             </div>
-
-            <template x-if="getDeposits().length === 0">
-              <div class="text-center py-8 text-slate-600 text-[11px] italic">
-                Drag deposits here or add new entries.
-              </div>
-            </template>
-
-            <template x-for="item in getDeposits()" :key="item.id">
-              <div 
-                :draggable="isAdmin"
-                @dragstart="handleDragStart($event, item)"
-                class="draggable-item bg-slate-900 border p-2.5 rounded-lg flex items-center justify-between transition shadow-md"
-                :class="item.status === 'upcoming' ? 'border-slate-800 bg-slate-900/40 text-slate-400' : 'border-emerald-900/60 text-emerald-300'"
-              >
-                <div>
-                  <div class="flex items-center gap-1.5">
-                    <span class="text-xs font-bold text-white" x-text="item.source"></span>
-                    <span x-show="item.status === 'upcoming'" class="text-[8px] bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded border border-slate-700">Future</span>
-                  </div>
-                  <div class="flex items-center gap-2 mt-1">
-                    <input 
-                      type="date" 
-                      x-model="item.date" 
-                      @change="syncToFirebase()"
-                      :disabled="!isAdmin"
-                      class="bg-slate-950 border border-slate-800 text-[10px] text-slate-300 px-1.5 py-0.5 rounded focus:outline-none focus:border-emerald-500"
-                    >
-                  </div>
-                </div>
-
-                <div class="flex items-center gap-2">
-                  <span class="text-xs font-bold font-mono" :class="item.status === 'upcoming' ? 'text-slate-400' : 'text-emerald-400'" x-text="'+$' + Number(item.amount).toFixed(2)"></span>
-                  <button x-show="isAdmin" @click="deleteTransaction(item.id)" class="text-slate-600 hover:text-rose-400 text-xs">✕</button>
-                </div>
-              </div>
-            </template>
-          </div>
-
-          <!-- RIGHT COLUMN: WITHDRAWALS (-) -->
-          <div 
-            class="p-3 overflow-y-auto space-y-2 pl-4 h-full"
-            @dragover.prevent
-            @drop="handleDrop($event, 'expense')"
-          >
-            <div class="sticky top-0 bg-slate-950 py-1 text-center border-b border-rose-900/40 text-[11px] font-black text-rose-400 uppercase tracking-wider mb-2 z-20">
-              Withdrawals (-)
-            </div>
-
-            <template x-if="getWithdrawals().length === 0">
-              <div class="text-center py-8 text-slate-600 text-[11px] italic">
-                Drag expenses here or add new entries.
-              </div>
-            </template>
-
-            <template x-for="item in getWithdrawals()" :key="item.id">
-              <div 
-                :draggable="isAdmin"
-                @dragstart="handleDragStart($event, item)"
-                class="draggable-item bg-slate-900 border p-2.5 rounded-lg flex items-center justify-between transition shadow-md"
-                :class="item.status === 'upcoming' ? 'border-slate-800 bg-slate-900/40 text-slate-400' : 'border-rose-900/60 text-rose-300'"
-              >
-                <div>
-                  <div class="flex items-center gap-1.5">
-                    <span class="text-xs font-bold text-white" x-text="item.source"></span>
-                    <span x-show="item.status === 'upcoming'" class="text-[8px] bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded border border-slate-700">Future</span>
-                  </div>
-                  <div class="flex items-center gap-2 mt-1">
-                    <input 
-                      type="date" 
-                      x-model="item.date" 
-                      @change="syncToFirebase()"
-                      :disabled="!isAdmin"
-                      class="bg-slate-950 border border-slate-800 text-[10px] text-slate-300 px-1.5 py-0.5 rounded focus:outline-none focus:border-rose-500"
-                    >
-                  </div>
-                </div>
-
-                <div class="flex items-center gap-2">
-                  <span class="text-xs font-bold font-mono" :class="item.status === 'upcoming' ? 'text-slate-400' : 'text-rose-400'" x-text="'-$' + Number(item.amount).toFixed(2)"></span>
-                  <button x-show="isAdmin" @click="deleteTransaction(item.id)" class="text-slate-600 hover:text-rose-400 text-xs">✕</button>
-                </div>
-              </div>
-            </template>
-          </div>
-
+          </template>
         </div>
       </div>
 
       <!-- ROSTER PANEL (4 cols) -->
       <div class="lg:col-span-4 bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 shadow-lg flex flex-col min-h-0">
-        <div class="flex justify-between items-center mb-2 flex-none">
-          <div>
-            <h2 class="text-xs font-bold text-white flex items-center gap-2">👥 Roster & Dues</h2>
-          </div>
+        <div class="flex justify-between items-center mb-1 flex-none">
+          <h2 class="text-xs font-bold text-white flex items-center gap-2">👥 Roster &amp; Permissions</h2>
           <span class="text-[10px] text-slate-500 font-mono" x-text="roster.length + ' members'"></span>
+        </div>
+
+        <div class="flex items-center justify-between gap-2 mb-2 flex-none">
+          <template x-if="!editingDues">
+            <span class="text-[10px] text-slate-400">Dues Amount: <span class="font-bold text-slate-200" x-text="'$' + Number(duesAmount).toFixed(2)"></span></span>
+          </template>
+          <template x-if="editingDues && can('admin')">
+            <div class="flex items-center gap-1.5">
+              <span class="text-[10px] text-slate-400">$</span>
+              <input type="number" step="0.01" min="0" x-model.number="duesAmount" class="bg-slate-950 border border-slate-700 text-[10px] text-white px-1.5 py-0.5 rounded w-20 focus:outline-none focus:border-blue-500">
+            </div>
+          </template>
+          <button x-show="can('admin')" @click="toggleEditDues()" class="text-[10px] text-blue-400 hover:underline">
+            <span x-text="editingDues ? 'Done' : 'Edit Dues'"></span>
+          </button>
         </div>
 
         <div class="space-y-2 overflow-y-auto flex-1 pr-1">
           <template x-if="roster.length === 0">
-            <div class="text-center py-8 text-slate-600 text-[11px] italic">
-              No members listed. Add members in Admin Mode.
-            </div>
+            <div class="text-center py-8 text-slate-600 text-[11px] italic">No members listed yet.</div>
           </template>
 
           <template x-for="member in roster" :key="member.id">
-            <div class="bg-slate-950/70 border border-slate-800 p-2.5 rounded-lg flex items-center justify-between">
-              <div>
-                <p class="text-xs font-bold text-slate-200" x-text="member.name"></p>
-                <p class="text-[9px] text-slate-500" x-show="member.notes" x-text="member.notes"></p>
+            <div class="bg-slate-950/70 border border-slate-800 p-2.5 rounded-lg">
+              <div class="flex items-center justify-between gap-2">
+                <div class="min-w-0">
+                  <p class="text-xs font-bold text-slate-200 truncate" x-text="member.name"></p>
+                  <p class="text-[9px] text-slate-500 truncate" x-show="member.notes" x-text="member.notes"></p>
+                </div>
+                <div class="flex items-center gap-2 flex-none">
+                  <button :disabled="!can('officer')" @click="toggleDues(member.id)"
+                          class="text-[9px] font-bold px-2 py-0.5 rounded transition border"
+                          :class="member.duesPaid ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border-rose-500/30'"
+                          x-text="member.duesPaid ? 'Paid ✓' : 'Unpaid !'"></button>
+                  <button x-show="can('admin')" @click="removeMember(member.id)" class="text-slate-600 hover:text-rose-400 text-xs">✕</button>
+                </div>
               </div>
-
-              <div class="flex items-center gap-2">
-                <button 
-                  :disabled="!isAdmin"
-                  @click="toggleDues(member.id)"
-                  class="text-[9px] font-bold px-2 py-0.5 rounded transition border"
-                  :class="member.duesPaid ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border-rose-500/30'"
-                  x-text="member.duesPaid ? 'Paid ✓' : 'Unpaid !'"
-                ></button>
-                <button x-show="isAdmin" @click="removeMember(member.id)" class="text-slate-600 hover:text-rose-400 text-xs">✕</button>
+              <div class="mt-1.5 flex items-center gap-2">
+                <span class="text-[9px] text-slate-500">Role:</span>
+                <select x-show="can('admin')" x-model="member.role" @change="syncToFirebase()"
+                        class="bg-slate-900 border border-slate-800 text-[9px] text-slate-300 rounded px-1.5 py-0.5 focus:outline-none focus:border-blue-500">
+                  <option value="Viewer">Viewer</option>
+                  <option value="Officer">Officer</option>
+                  <option value="Admin">Admin</option>
+                </select>
+                <span x-show="!can('admin')" class="text-[9px] font-bold px-1.5 py-0.5 rounded border"
+                      :class="member.role === 'Admin' ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : (member.role === 'Officer' ? 'text-blue-400 border-blue-500/30 bg-blue-500/10' : 'text-slate-400 border-slate-700 bg-slate-800/50')"
+                      x-text="member.role"></span>
               </div>
             </div>
           </template>
+        </div>
+
+        <!-- ADMIN: PASSWORD SETTINGS -->
+        <div x-show="can('admin')" class="mt-3 pt-3 border-t border-slate-800 flex-none space-y-2">
+          <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Access Passwords</p>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-[9px] text-slate-500">Officer Password</label>
+              <input type="text" x-model="passwords.officer" @change="syncToFirebase()" class="w-full bg-slate-950 border border-slate-800 text-[10px] text-white rounded px-2 py-1 focus:outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="text-[9px] text-slate-500">Admin Password</label>
+              <input type="text" x-model="passwords.admin" @change="syncToFirebase()" class="w-full bg-slate-950 border border-slate-800 text-[10px] text-white rounded px-2 py-1 focus:outline-none focus:border-emerald-500">
+            </div>
+          </div>
         </div>
       </div>
 
@@ -404,29 +416,20 @@
 
   </main>
 
-  <!-- ADMIN PASSWORD MODAL -->
-  <div 
-    x-show="showPasswordModal" 
-    class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-    x-transition
-  >
+  <!-- ACCESS PASSWORD MODAL -->
+  <div x-show="showPasswordModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-transition>
     <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl max-w-sm w-full space-y-3 shadow-2xl">
-      <h3 class="text-xs font-bold text-white flex items-center gap-2">🔒 Enter Board Admin Password</h3>
-      <p class="text-[11px] text-slate-400">Provide password to unlock executive editing capabilities.</p>
-      
+      <h3 class="text-xs font-bold text-white flex items-center gap-2">🔒 Enter <span x-text="pendingLevel === 'admin' ? 'Admin' : 'Officer'"></span> Password</h3>
+      <p class="text-[11px] text-slate-400">Provide the password to unlock <span x-text="pendingLevel"></span> permissions.</p>
+
       <form @submit.prevent="verifyPassword()">
-        <input 
-          type="password" 
-          x-model="passwordInput" 
-          placeholder="Password (Default: admin123)" 
-          class="bg-slate-950 border border-slate-800 text-xs text-white rounded-lg px-3 py-1.5 w-full focus:outline-none focus:border-emerald-500 mb-2"
-          required
-        >
-        <p x-show="passwordError" class="text-[10px] text-rose-400 mb-2">Incorrect admin password. Try again.</p>
-        
+        <input type="password" x-model="passwordInput" placeholder="Password" autofocus
+               class="bg-slate-950 border border-slate-800 text-xs text-white rounded-lg px-3 py-1.5 w-full focus:outline-none focus:border-emerald-500 mb-2" required>
+        <p x-show="passwordError" class="text-[10px] text-rose-400 mb-2">Incorrect password. Try again.</p>
+
         <div class="flex justify-end gap-2">
           <button type="button" @click="showPasswordModal = false; passwordError = false;" class="text-xs text-slate-400 hover:text-white px-2.5 py-1">Cancel</button>
-          <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-lg">Authenticate</button>
+          <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-lg">Unlock</button>
         </div>
       </form>
     </div>
@@ -436,6 +439,8 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import Alpine from "https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/module.esm.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB2Z8289zUk1ea2BkeYIsLbm7OaVN0SBRk",
@@ -450,73 +455,196 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
+    const auth = getAuth(app);
 
     window.financeApp = function() {
       return {
-        isAdmin: false,
+        user: null,
+        clubName: '',
+        authMode: 'login',
+        authForm: { clubName: '', email: '', password: '', confirmPassword: '' },
+        authError: '',
+        authNotice: '',
+        authLoading: false,
+        _dataUnsub: null,
+
+        accessLevel: 'viewer',
+        pendingLevel: null,
         showPasswordModal: false,
         passwordInput: '',
         passwordError: false,
-        adminPassword: 'admin123',
+        passwords: { officer: 'officer123', admin: 'admin123' },
 
-        startingBalance: 500.00,
+        startingBalance: 0.00,
         editingStarting: false,
+        duesAmount: 50.00,
+        editingDues: false,
         showTxForm: false,
         showMemberForm: false,
         hoveredPoint: null,
         draggedItem: null,
+        dragHoverKey: null,
 
         todayStr: new Date().toISOString().split('T')[0],
 
-        newTx: { source: '', amount: '', type: 'deposit', status: 'cleared', date: '' },
-        newMember: { name: '', notes: '' },
+        newTx: { source: '', amount: '', type: 'deposit', date: '', notes: '' },
+        newMember: { name: '', role: 'Viewer', notes: '' },
 
-        timelineData: [
-          { id: 1, source: 'Spring Dues', amount: 350.00, type: 'deposit', status: 'cleared', date: '2026-08-01' },
-          { id: 2, source: 'Equipment Gear', amount: 120.00, type: 'expense', status: 'cleared', date: '2026-08-10' },
-          { id: 3, source: 'Fundraiser', amount: 200.00, type: 'deposit', status: 'cleared', date: '2026-08-18' },
-          { id: 4, source: 'Travel Bus Reservation', amount: 180.00, type: 'expense', status: 'upcoming', date: '2026-08-28' }
-        ],
-        roster: [
-          { id: 101, name: 'Alex Johnson', notes: 'Sprint Backstroke', duesPaid: true },
-          { id: 102, name: 'Sam Taylor', notes: 'Mid-Distance', duesPaid: false }
-        ],
+        transactions: [],
+        roster: [],
 
         init() {
-          const stateRef = ref(db, 'finance_data');
-          onValue(stateRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-              this.startingBalance = data.startingBalance ?? this.startingBalance;
-              this.timelineData = data.timelineData ?? [];
-              this.roster = data.roster ?? [];
+          onAuthStateChanged(auth, (fbUser) => {
+            if (this._dataUnsub) {
+              this._dataUnsub();
+              this._dataUnsub = null;
+            }
+            if (fbUser) {
+              this.user = { uid: fbUser.uid, email: fbUser.email };
+              this.attachClubListener(fbUser.uid);
             } else {
-              this.syncToFirebase();
+              this.user = null;
+              this.clubName = '';
+              this.resetLocalState();
             }
           });
         },
 
-        syncToFirebase() {
-          set(ref(db, 'finance_data'), {
-            startingBalance: this.startingBalance,
-            timelineData: this.timelineData,
-            roster: this.roster
+        attachClubListener(uid) {
+          const clubRef = ref(db, `clubs/${uid}`);
+          this._dataUnsub = onValue(clubRef, (snapshot) => {
+            const data = snapshot.val();
+            if (!data) return;
+            this.clubName = data.clubName ?? '';
+            const fd = data.financeData ?? {};
+            this.startingBalance = fd.startingBalance ?? 0;
+            this.duesAmount = fd.duesAmount ?? 50;
+            this.transactions = fd.transactions ?? [];
+            this.roster = fd.roster ?? [];
+            this.passwords = fd.passwords ?? { officer: 'officer123', admin: 'admin123' };
           });
         },
 
-        toggleAdminPrompt() {
-          if (this.isAdmin) {
-            this.isAdmin = false;
-          } else {
-            this.passwordInput = '';
-            this.passwordError = false;
-            this.showPasswordModal = true;
+        resetLocalState() {
+          this.accessLevel = 'viewer';
+          this.startingBalance = 0;
+          this.duesAmount = 50;
+          this.transactions = [];
+          this.roster = [];
+          this.passwords = { officer: 'officer123', admin: 'admin123' };
+        },
+
+        syncToFirebase() {
+          if (!this.user) return;
+          set(ref(db, `clubs/${this.user.uid}/financeData`), {
+            startingBalance: this.startingBalance,
+            duesAmount: this.duesAmount,
+            transactions: this.transactions,
+            roster: this.roster,
+            passwords: this.passwords
+          });
+        },
+
+        // ---------- AUTH ----------
+        authErrorMessage(err) {
+          const map = {
+            'auth/email-already-in-use': 'An account with that email already exists. Try logging in instead.',
+            'auth/invalid-email': 'That email address looks invalid.',
+            'auth/weak-password': 'Password must be at least 6 characters.',
+            'auth/user-not-found': 'No club found with that email.',
+            'auth/wrong-password': 'Incorrect email or password.',
+            'auth/invalid-credential': 'Incorrect email or password.',
+            'auth/too-many-requests': 'Too many attempts. Please wait a moment and try again.'
+          };
+          return map[err.code] || 'Something went wrong. Please try again.';
+        },
+
+        async login() {
+          this.authError = '';
+          this.authNotice = '';
+          this.authLoading = true;
+          try {
+            await signInWithEmailAndPassword(auth, this.authForm.email.trim(), this.authForm.password);
+            this.authForm = { clubName: '', email: '', password: '', confirmPassword: '' };
+          } catch (err) {
+            this.authError = this.authErrorMessage(err);
+          } finally {
+            this.authLoading = false;
           }
         },
 
+        async registerClub() {
+          this.authError = '';
+          if (!this.authForm.clubName.trim()) { this.authError = 'Please enter your club name.'; return; }
+          if (this.authForm.password.length < 6) { this.authError = 'Password must be at least 6 characters.'; return; }
+          if (this.authForm.password !== this.authForm.confirmPassword) { this.authError = 'Passwords do not match.'; return; }
+
+          this.authLoading = true;
+          try {
+            const cred = await createUserWithEmailAndPassword(auth, this.authForm.email.trim(), this.authForm.password);
+            await set(ref(db, `clubs/${cred.user.uid}`), {
+              clubName: this.authForm.clubName.trim(),
+              financeData: {
+                startingBalance: 0,
+                duesAmount: 50,
+                transactions: [],
+                roster: [],
+                passwords: { officer: 'officer123', admin: 'admin123' }
+              }
+            });
+            this.authForm = { clubName: '', email: '', password: '', confirmPassword: '' };
+          } catch (err) {
+            this.authError = this.authErrorMessage(err);
+          } finally {
+            this.authLoading = false;
+          }
+        },
+
+        async forgotPassword() {
+          this.authError = '';
+          this.authNotice = '';
+          if (!this.authForm.email.trim()) { this.authError = 'Enter your email above first, then click "Forgot password?"'; return; }
+          try {
+            await sendPasswordResetEmail(auth, this.authForm.email.trim());
+            this.authNotice = 'Password reset email sent — check your inbox.';
+          } catch (err) {
+            this.authError = this.authErrorMessage(err);
+          }
+        },
+
+        async logout() {
+          await signOut(auth);
+          this.accessLevel = 'viewer';
+        },
+
+        // ---------- ACCESS CONTROL ----------
+        accessLabel() {
+          if (this.accessLevel === 'admin') return 'Admin Mode (Active)';
+          if (this.accessLevel === 'officer') return 'Officer Mode (Active)';
+          return 'Read-Only Mode';
+        },
+
+        can(level) {
+          const rank = { viewer: 0, officer: 1, admin: 2 };
+          return rank[this.accessLevel] >= rank[level];
+        },
+
+        requestAccess(level) {
+          if (level === this.accessLevel) return;
+          if (level === 'viewer') {
+            this.accessLevel = 'viewer';
+            return;
+          }
+          this.pendingLevel = level;
+          this.passwordInput = '';
+          this.passwordError = false;
+          this.showPasswordModal = true;
+        },
+
         verifyPassword() {
-          if (this.passwordInput === this.adminPassword) {
-            this.isAdmin = true;
+          const expected = this.passwords[this.pendingLevel];
+          if (this.passwordInput === expected) {
+            this.accessLevel = this.pendingLevel;
             this.showPasswordModal = false;
             this.passwordError = false;
           } else {
@@ -525,45 +653,67 @@
         },
 
         toggleEditStarting() {
-          if (this.editingStarting) {
-            this.syncToFirebase();
-          }
+          if (this.editingStarting) this.syncToFirebase();
           this.editingStarting = !this.editingStarting;
         },
 
-        getDeposits() {
-          return this.timelineData.filter(t => t.type === 'deposit');
+        openTxForm() {
+          if (!this.newTx.date) this.newTx.date = this.todayStr;
+          this.showTxForm = !this.showTxForm;
         },
 
-        getWithdrawals() {
-          return this.timelineData.filter(t => t.type === 'expense');
+        // ---------- TRANSACTIONS ----------
+        isUpcoming(date) {
+          return date > this.todayStr;
+        },
+
+        getTimelineRows() {
+          const groups = {};
+          this.transactions.forEach(t => {
+            if (!groups[t.date]) groups[t.date] = { date: t.date, deposits: [], withdrawals: [] };
+            (t.type === 'deposit' ? groups[t.date].deposits : groups[t.date].withdrawals).push(t);
+          });
+          const sortedDates = Object.keys(groups).sort();
+          const rows = [];
+          let todayInserted = false;
+          for (const d of sortedDates) {
+            if (!todayInserted && d > this.todayStr) {
+              rows.push({ kind: 'today' });
+              todayInserted = true;
+            }
+            rows.push({ kind: 'group', ...groups[d] });
+          }
+          if (!todayInserted) rows.push({ kind: 'today' });
+          return rows;
         },
 
         handleDragStart(event, item) {
-          if (!this.isAdmin) return;
+          if (!this.can('officer')) return;
           this.draggedItem = item;
-          event.dataTransfer.setData('text/plain', item.id);
+          event.dataTransfer.setData('text/plain', String(item.id));
         },
 
-        handleDrop(event, targetType) {
-          if (!this.isAdmin || !this.draggedItem) return;
-          const item = this.timelineData.find(t => t.id === this.draggedItem.id);
+        handleDrop(event, targetType, targetDate) {
+          this.dragHoverKey = null;
+          if (!this.can('officer') || !this.draggedItem) return;
+          const item = this.transactions.find(t => t.id === this.draggedItem.id);
           if (item) {
             item.type = targetType;
+            item.date = targetDate;
             this.syncToFirebase();
           }
           this.draggedItem = null;
         },
 
         getTotalClearedDeposits() {
-          return this.timelineData
-            .filter(t => t.type === 'deposit' && t.status === 'cleared')
+          return this.transactions
+            .filter(t => t.type === 'deposit' && !this.isUpcoming(t.date))
             .reduce((sum, t) => sum + Number(t.amount), 0);
         },
 
         getTotalClearedExpenses() {
-          return this.timelineData
-            .filter(t => t.type === 'expense' && t.status === 'cleared')
+          return this.transactions
+            .filter(t => t.type === 'expense' && !this.isUpcoming(t.date))
             .reduce((sum, t) => sum + Number(t.amount), 0);
         },
 
@@ -572,23 +722,28 @@
         },
 
         getProjectedBalance() {
-          const allDeposits = this.timelineData.filter(t => t.type === 'deposit').reduce((sum, t) => sum + Number(t.amount), 0);
-          const allExpenses = this.timelineData.filter(t => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount), 0);
+          const allDeposits = this.transactions.filter(t => t.type === 'deposit').reduce((sum, t) => sum + Number(t.amount), 0);
+          const allExpenses = this.transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount), 0);
           return Number(this.startingBalance) + allDeposits - allExpenses;
         },
 
+        formatDate(dateStr) {
+          const parts = dateStr.split('-');
+          if (parts.length !== 3) return dateStr;
+          return `${parseInt(parts[1])}/${parseInt(parts[2])}/${parts[0].slice(2)}`;
+        },
+
+        // ---------- GRAPH ----------
         getCalculatedGraphData() {
-          const sorted = [...this.timelineData].sort((a, b) => new Date(a.date) - new Date(b.date));
+          const sorted = [...this.transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
           let running = Number(this.startingBalance);
           return sorted.map((tx) => {
             running += tx.type === 'deposit' ? Number(tx.amount) : -Number(tx.amount);
-            const parts = tx.date.split('-');
-            const dateShort = parts.length === 3 ? `${parseInt(parts[1])}/${parseInt(parts[2])}` : tx.date;
             return {
               date: tx.date,
-              dateShort: dateShort,
+              dateShort: this.formatDate(tx.date).split('/').slice(0,2).join('/'),
               source: tx.source,
-              status: tx.status,
+              status: this.isUpcoming(tx.date) ? 'upcoming' : 'cleared',
               amount: tx.type === 'deposit' ? `+$${tx.amount}` : `-$${tx.amount}`,
               balance: running
             };
@@ -678,22 +833,63 @@
           const maxBal = Math.max(...balances, base, 100);
           const balRange = maxBal - minBal || 1;
           const usableHeight = height - paddingBottom - 25;
-          
+
           const startY = height - paddingBottom - ((base - minBal) / balRange) * usableHeight;
-          
+
           let path = `M ${paddingLeft} ${startY}`;
           points.forEach(p => {
             if (filterStatus === 'cleared' && p.data.status === 'cleared') {
               path += ` L ${p.x} ${p.y}`;
-            } else if (filterStatus === 'future') {
+            } else if (filterStatus === 'upcoming') {
               path += ` L ${p.x} ${p.y}`;
             }
           });
           return path;
         },
 
+        renderChartSvg() {
+          const yTicks = this.getYScales();
+          const xTicks = this.getXScales();
+          const hasData = this.transactions.length > 0;
+          const todayX = hasData ? this.getTodayXPosition() : null;
+
+          let svg = `<svg viewBox="0 0 800 220" preserveAspectRatio="none" class="w-full h-full overflow-visible">`;
+          svg += `<defs><linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#10b981" stop-opacity="0.25"/>
+                    <stop offset="100%" stop-color="#10b981" stop-opacity="0.0"/>
+                  </linearGradient></defs>`;
+
+          svg += `<line x1="85" y1="20" x2="85" y2="175" stroke="#475569" stroke-width="2" />`;
+          svg += `<line x1="85" y1="175" x2="775" y2="175" stroke="#475569" stroke-width="2" />`;
+
+          yTicks.forEach(t => {
+            svg += `<line x1="85" y1="${t.y}" x2="775" y2="${t.y}" stroke="#1e293b" stroke-dasharray="3 3" />`;
+            svg += `<line x1="79" y1="${t.y}" x2="85" y2="${t.y}" stroke="#94a3b8" stroke-width="1.5" />`;
+            svg += `<text x="74" y="${t.y + 4}" fill="#cbd5e1" font-size="10" text-anchor="end" font-weight="700">$${t.val.toLocaleString()}</text>`;
+          });
+
+          xTicks.forEach(t => {
+            svg += `<line x1="${t.x}" y1="175" x2="${t.x}" y2="181" stroke="#94a3b8" stroke-width="1.5" />`;
+            svg += `<text x="${t.x}" y="196" fill="#cbd5e1" font-size="10" font-weight="700" text-anchor="middle">${t.dateStr}</text>`;
+          });
+
+          if (hasData) {
+            svg += `<path d="${this.generateGraphAreaPath()}" fill="url(#chartGradient)" />`;
+            svg += `<path d="${this.generateGraphPath('cleared')}" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />`;
+            svg += `<path d="${this.generateGraphPath('upcoming')}" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round" />`;
+          }
+
+          if (todayX) {
+            svg += `<line x1="${todayX}" y1="20" x2="${todayX}" y2="175" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="4 3" />`;
+            svg += `<text x="${todayX}" y="15" fill="#22d3ee" font-size="8" font-weight="900" text-anchor="middle">TODAY</text>`;
+          }
+
+          svg += `</svg>`;
+          return svg;
+        },
+
         generateGraphAreaPath() {
-          const linePath = this.generateGraphPath('future');
+          const linePath = this.generateGraphPath('upcoming');
           if (!linePath) return "";
           const points = this.getGraphPoints();
           const lastPoint = points[points.length - 1];
@@ -703,51 +899,106 @@
 
         addTransaction() {
           if (!this.newTx.source || !this.newTx.amount || !this.newTx.date) return;
-          this.timelineData.push({
+          this.transactions.push({
             id: Date.now(),
             source: this.newTx.source,
             amount: parseFloat(this.newTx.amount),
             type: this.newTx.type,
-            status: this.newTx.status,
-            date: this.newTx.date
+            date: this.newTx.date,
+            notes: this.newTx.notes
           });
           this.syncToFirebase();
-          this.newTx = { source: '', amount: '', type: 'deposit', status: 'cleared', date: '' };
+          this.newTx = { source: '', amount: '', type: 'deposit', date: this.todayStr, notes: '' };
           this.showTxForm = false;
         },
 
         deleteTransaction(id) {
-          this.timelineData = this.timelineData.filter(t => t.id !== id);
+          const tx = this.transactions.find(t => t.id === id);
+          if (tx && !confirm(`Delete "${tx.source}" (${tx.type === 'deposit' ? '+' : '-'}$${Number(tx.amount).toFixed(2)})?`)) return;
+          this.transactions = this.transactions.filter(t => t.id !== id);
+          if (tx && tx.duesFor) {
+            const m = this.roster.find(m => m.id === tx.duesFor);
+            if (m) m.duesPaid = false;
+          }
           this.syncToFirebase();
         },
 
+        toggleEditDues() {
+          if (this.editingDues) this.syncToFirebase();
+          this.editingDues = !this.editingDues;
+        },
+
+        // ---------- MEMBERS ----------
         addMember() {
           if (!this.newMember.name) return;
           this.roster.push({
             id: Date.now(),
             name: this.newMember.name,
+            role: this.newMember.role,
             notes: this.newMember.notes,
             duesPaid: false
           });
           this.syncToFirebase();
-          this.newMember = { name: '', notes: '' };
+          this.newMember = { name: '', role: 'Viewer', notes: '' };
           this.showMemberForm = false;
         },
 
         removeMember(id) {
+          const m = this.roster.find(m => m.id === id);
+          if (m && !confirm(`Remove ${m.name} from the roster? Their dues transaction (if any) will also be removed.`)) return;
           this.roster = this.roster.filter(m => m.id !== id);
+          this.transactions = this.transactions.filter(t => t.duesFor !== id);
           this.syncToFirebase();
+        },
+
+        exportCsv() {
+          const rows = [['Date', 'Type', 'Source', 'Amount', 'Status', 'Notes']];
+          [...this.transactions]
+            .sort((a, b) => new Date(a.date) - new Date(b.date))
+            .forEach(t => {
+              rows.push([
+                t.date,
+                t.type === 'deposit' ? 'Deposit' : 'Withdrawal',
+                t.source,
+                Number(t.amount).toFixed(2),
+                this.isUpcoming(t.date) ? 'Scheduled' : 'Cleared',
+                t.notes || ''
+              ]);
+            });
+          const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+          const blob = new Blob([csv], { type: 'text/csv' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${(this.clubName || 'club').replace(/[^a-z0-9]+/gi, '_')}_transactions_${this.todayStr}.csv`;
+          a.click();
+          URL.revokeObjectURL(url);
         },
 
         toggleDues(id) {
           const m = this.roster.find(m => m.id === id);
-          if (m) {
-            m.duesPaid = !m.duesPaid;
-            this.syncToFirebase();
+          if (!m) return;
+          m.duesPaid = !m.duesPaid;
+          if (m.duesPaid) {
+            this.transactions.push({
+              id: Date.now(),
+              source: `Dues - ${m.name}`,
+              amount: Number(this.duesAmount),
+              type: 'deposit',
+              date: this.todayStr,
+              notes: 'Membership dues',
+              duesFor: m.id
+            });
+          } else {
+            this.transactions = this.transactions.filter(t => t.duesFor !== m.id);
           }
+          this.syncToFirebase();
         }
       }
     }
+
+    window.Alpine = Alpine;
+    Alpine.start();
   </script>
 </body>
 </html>
