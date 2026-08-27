@@ -27,7 +27,7 @@
         <h1 class="text-lg font-extrabold tracking-tight text-white flex items-center gap-2">
           <span class="p-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">🛡️</span> Executive Financial Hub
         </h1>
-        <span class="text-[11px] bg-slate-800/80 text-slate-300 px-2.5 py-0.5 rounded-full border border-slate-700/50 font-medium">Real-Time Cloud Sync</span>
+        <span class="text-[11px] bg-slate-800/80 text-slate-300 px-2.5 py-0.5 rounded-full border border-slate-700/50 font-medium">Responsive View</span>
       </div>
 
       <!-- BOARD-LEVEL ACCESS WITH PASSWORD SECURITY -->
@@ -133,6 +133,7 @@
         <!-- SVG Container with Dedicated Margin Spacing for Outer Axes -->
         <div class="relative bg-slate-950 border border-slate-800 rounded-xl p-1 h-48 w-full overflow-hidden">
           <div class="w-full h-full relative">
+            <!-- SVG Canvas with ViewBox padded for Outer Axis Rendering -->
             <svg viewBox="0 0 800 220" class="w-full h-full overflow-visible">
               <defs>
                 <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
@@ -141,36 +142,51 @@
                 </linearGradient>
               </defs>
 
+              <!-- VISIBLE AXIS LINES -->
+              <!-- Y-Axis (Dollar Axis) -->
               <line x1="85" y1="20" x2="85" y2="175" stroke="#475569" stroke-width="2" />
+
+              <!-- X-Axis (Date Axis) -->
               <line x1="85" y1="175" x2="775" y2="175" stroke="#475569" stroke-width="2" />
 
+              <!-- NUMERIC Y-AXIS TICKS & GRID LINES -->
               <template x-for="yTick in getYScales()" :key="yTick.val">
                 <g>
+                  <!-- Horizontal Gridline -->
                   <line x1="85" :y1="yTick.y" x2="775" :y2="yTick.y" stroke="#1e293b" stroke-dasharray="3 3" />
+                  <!-- Y-Axis Tick Mark -->
                   <line x1="79" :y1="yTick.y" x2="85" :y2="yTick.y" stroke="#94a3b8" stroke-width="1.5" />
+                  <!-- Dynamic Numeric Dollar Amount Label -->
                   <text x="74" :y="yTick.y + 4" fill="#cbd5e1" font-size="10" text-anchor="end" font-weight="700" x-text="'$' + yTick.val.toLocaleString()"></text>
                 </g>
               </template>
 
+              <!-- DATE X-AXIS LABELS & TICKS (Dynamic or Baseline Grid) -->
               <template x-for="xTick in getXScales()" :key="xTick.date">
                 <g>
+                  <!-- X-Axis Tick Mark -->
                   <line :x1="xTick.x" y1="175" :x2="xTick.x" y2="181" stroke="#94a3b8" stroke-width="1.5" />
+                  <!-- Actual Date String Label -->
                   <text :x="xTick.x" y="196" fill="#cbd5e1" font-size="10" font-weight="700" text-anchor="middle" x-text="xTick.dateStr"></text>
                 </g>
               </template>
 
+              <!-- GRAPH GRADIENT AREA -->
               <template x-if="timelineData.length > 0">
                 <path :d="generateGraphAreaPath()" fill="url(#chartGradient)" />
               </template>
 
+              <!-- CLEARED BALANCE TRAJECTORY -->
               <template x-if="timelineData.length > 0">
                 <path :d="generateGraphPath('cleared')" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
               </template>
               
+              <!-- FUTURE BALANCE TRAJECTORY -->
               <template x-if="timelineData.length > 0">
                 <path :d="generateGraphPath('future')" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round" />
               </template>
 
+              <!-- TODAY DASHED SEPARATOR LINE -->
               <template x-if="timelineData.length > 0 && getTodayXPosition()">
                 <g>
                   <line :x1="getTodayXPosition()" y1="20" :x2="getTodayXPosition()" y2="175" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="4 3" />
@@ -178,6 +194,7 @@
                 </g>
               </template>
 
+              <!-- DATA POINT NODES -->
               <template x-for="(pt, idx) in getGraphPoints()" :key="idx">
                 <circle
                   :cx="pt.x"
@@ -191,6 +208,7 @@
               </template>
             </svg>
 
+            <!-- Dynamic Hover Tooltip -->
             <div 
               x-show="hoveredPoint" 
               class="absolute top-2 right-2 bg-slate-900/95 border border-slate-700 px-3 py-1.5 rounded-xl shadow-2xl text-xs space-y-0.5 backdrop-blur-md z-30 pointer-events-none"
@@ -252,7 +270,10 @@
           <span class="text-[10px] text-slate-500 font-mono" x-text="timelineData.length + ' items'"></span>
         </div>
 
+        <!-- Dynamic T-Chart Containers -->
         <div class="grid grid-cols-2 gap-0 border border-slate-800 rounded-xl flex-1 min-h-0 relative bg-slate-950/60">
+          
+          <!-- Central Dashed Divider -->
           <div class="absolute inset-y-0 left-1/2 w-0 border-r-2 border-dashed border-slate-800 z-10 pointer-events-none"></div>
 
           <!-- LEFT COLUMN: DEPOSITS (+) -->
@@ -422,12 +443,11 @@
     </div>
   </div>
 
-  <!-- FIREBASE INTEGRATION & APPLICATION ENGINE -->
+  <!-- APP STATE & FIREBASE ENGINE -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    // Your exact Firebase project config
     const firebaseConfig = {
       apiKey: "AIzaSyB2Z8289zUk1ea2BkeYIsLbm7OaVN0SBRk",
       authDomain: "club-finance-app-e0354.firebaseapp.com",
@@ -462,15 +482,23 @@
         newTx: { source: '', amount: '', type: 'deposit', status: 'cleared', date: '' },
         newMember: { name: '', notes: '' },
 
-        timelineData: [],
-        roster: [],
+        timelineData: [
+          { id: 1, source: 'Spring Dues', amount: 350.00, type: 'deposit', status: 'cleared', date: '2026-08-01' },
+          { id: 2, source: 'Equipment Gear', amount: 120.00, type: 'expense', status: 'cleared', date: '2026-08-10' },
+          { id: 3, source: 'Fundraiser', amount: 200.00, type: 'deposit', status: 'cleared', date: '2026-08-18' },
+          { id: 4, source: 'Travel Bus Reservation', amount: 180.00, type: 'expense', status: 'upcoming', date: '2026-08-28' }
+        ],
+        roster: [
+          { id: 101, name: 'Alex Johnson', notes: 'Sprint Backstroke', duesPaid: true },
+          { id: 102, name: 'Sam Taylor', notes: 'Mid-Distance', duesPaid: false }
+        ],
 
         init() {
           const stateRef = ref(db, 'finance_data');
           onValue(stateRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
-              this.startingBalance = data.startingBalance ?? 500.00;
+              this.startingBalance = data.startingBalance ?? this.startingBalance;
               this.timelineData = data.timelineData ?? [];
               this.roster = data.roster ?? [];
             } else {
@@ -514,8 +542,13 @@
           this.editingStarting = !this.editingStarting;
         },
 
-        getDeposits() { return this.timelineData.filter(t => t.type === 'deposit'); },
-        getWithdrawals() { return this.timelineData.filter(t => t.type === 'expense'); },
+        getDeposits() {
+          return this.timelineData.filter(t => t.type === 'deposit');
+        },
+
+        getWithdrawals() {
+          return this.timelineData.filter(t => t.type === 'expense');
+        },
 
         handleDragStart(event, item) {
           if (!this.isAdmin) return;
@@ -534,11 +567,15 @@
         },
 
         getTotalClearedDeposits() {
-          return this.timelineData.filter(t => t.type === 'deposit' && t.status === 'cleared').reduce((sum, t) => sum + Number(t.amount), 0);
+          return this.timelineData
+            .filter(t => t.type === 'deposit' && t.status === 'cleared')
+            .reduce((sum, t) => sum + Number(t.amount), 0);
         },
 
         getTotalClearedExpenses() {
-          return this.timelineData.filter(t => t.type === 'expense' && t.status === 'cleared').reduce((sum, t) => sum + Number(t.amount), 0);
+          return this.timelineData
+            .filter(t => t.type === 'expense' && t.status === 'cleared')
+            .reduce((sum, t) => sum + Number(t.amount), 0);
         },
 
         getCurrentBalance() {
@@ -558,7 +595,14 @@
             running += tx.type === 'deposit' ? Number(tx.amount) : -Number(tx.amount);
             const parts = tx.date.split('-');
             const dateShort = parts.length === 3 ? `${parseInt(parts[1])}/${parseInt(parts[2])}` : tx.date;
-            return { date: tx.date, dateShort, source: tx.source, status: tx.status, amount: tx.type === 'deposit' ? `+$${tx.amount}` : `-$${tx.amount}`, balance: running };
+            return {
+              date: tx.date,
+              dateShort: dateShort,
+              source: tx.source,
+              status: tx.status,
+              amount: tx.type === 'deposit' ? `+$${tx.amount}` : `-$${tx.amount}`,
+              balance: running
+            };
           });
         },
 
@@ -569,8 +613,10 @@
           const minBal = balances.length > 0 ? Math.min(...balances, base, 0) : 0;
           const maxBal = balances.length > 0 ? Math.max(...balances, base, 100) : 100;
           const step = (maxBal - minBal) / 4 || 25;
+
           const height = 220, paddingBottom = 45, paddingTop = 25;
           const usableHeight = height - paddingBottom - paddingTop;
+
           const ticks = [];
           for (let i = 0; i <= 4; i++) {
             const val = Math.round(minBal + step * i);
@@ -583,20 +629,23 @@
         getXScales() {
           const width = 800, paddingLeft = 85, paddingRight = 25;
           const usableWidth = width - paddingLeft - paddingRight;
+
           const data = this.getCalculatedGraphData();
           if (data.length > 0) {
-            return data.map((d, idx) => ({
-              x: paddingLeft + ((idx + 1) / data.length) * usableWidth,
-              dateStr: d.dateShort,
-              date: d.date
-            }));
+            return data.map((d, idx) => {
+              const x = paddingLeft + ((idx + 1) / data.length) * usableWidth;
+              return { x, dateStr: d.dateShort, date: d.date };
+            });
           }
+
           const dates = [];
           const now = new Date();
           for (let i = 0; i < 4; i++) {
             const d = new Date(now);
             d.setDate(d.getDate() + (i * 7));
-            dates.push({ x: paddingLeft + (i / 3) * usableWidth, dateStr: `${d.getMonth() + 1}/${d.getDate()}`, date: d.toISOString().split('T')[0] });
+            const x = paddingLeft + (i / 3) * usableWidth;
+            const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
+            dates.push({ x, dateStr, date: d.toISOString().split('T')[0] });
           }
           return dates;
         },
@@ -613,11 +662,11 @@
           const usableHeight = height - paddingBottom - paddingTop;
           const usableWidth = width - paddingLeft - paddingRight;
 
-          return data.map((d, idx) => ({
-            x: paddingLeft + ((idx + 1) / data.length) * usableWidth,
-            y: height - paddingBottom - ((d.balance - minBal) / balRange) * usableHeight,
-            data: d
-          }));
+          return data.map((d, idx) => {
+            const x = paddingLeft + ((idx + 1) / data.length) * usableWidth;
+            const y = height - paddingBottom - ((d.balance - minBal) / balRange) * usableHeight;
+            return { x, y, data: d };
+          });
         },
 
         getTodayXPosition() {
@@ -640,6 +689,7 @@
           const maxBal = Math.max(...balances, base, 100);
           const balRange = maxBal - minBal || 1;
           const usableHeight = height - paddingBottom - paddingTop;
+          
           const startY = height - paddingBottom - ((base - minBal) / balRange) * usableHeight;
           
           let path = `M ${paddingLeft} ${startY}`;
@@ -658,7 +708,8 @@
           if (!linePath) return "";
           const points = this.getGraphPoints();
           const lastPoint = points[points.length - 1];
-          return `${linePath} L ${lastPoint.x} 175 L 85 175 Z`;
+          const paddingLeft = 85, paddingBottom = 45, height = 220;
+          return `${linePath} L ${lastPoint.x} ${height - paddingBottom} L ${paddingLeft} ${height - paddingBottom} Z`;
         },
 
         addTransaction() {
