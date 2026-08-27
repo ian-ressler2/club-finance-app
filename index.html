@@ -133,7 +133,6 @@
         <!-- SVG Container with Dedicated Margin Spacing for Outer Axes -->
         <div class="relative bg-slate-950 border border-slate-800 rounded-xl p-1 h-48 w-full overflow-hidden">
           <div class="w-full h-full relative">
-            <!-- SVG Canvas with ViewBox padded for Outer Axis Rendering -->
             <svg viewBox="0 0 800 220" class="w-full h-full overflow-visible">
               <defs>
                 <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
@@ -142,51 +141,42 @@
                 </linearGradient>
               </defs>
 
-              <!-- VISIBLE AXIS LINES -->
-              <!-- Y-Axis (Dollar Axis) -->
+              <!-- AXIS LINES -->
               <line x1="85" y1="20" x2="85" y2="175" stroke="#475569" stroke-width="2" />
-
-              <!-- X-Axis (Date Axis) -->
               <line x1="85" y1="175" x2="775" y2="175" stroke="#475569" stroke-width="2" />
 
-              <!-- NUMERIC Y-AXIS TICKS & GRID LINES -->
+              <!-- Y-AXIS LABELS & GRID -->
               <template x-for="yTick in getYScales()" :key="yTick.val">
                 <g>
-                  <!-- Horizontal Gridline -->
                   <line x1="85" :y1="yTick.y" x2="775" :y2="yTick.y" stroke="#1e293b" stroke-dasharray="3 3" />
-                  <!-- Y-Axis Tick Mark -->
                   <line x1="79" :y1="yTick.y" x2="85" :y2="yTick.y" stroke="#94a3b8" stroke-width="1.5" />
-                  <!-- Dynamic Numeric Dollar Amount Label -->
                   <text x="74" :y="yTick.y + 4" fill="#cbd5e1" font-size="10" text-anchor="end" font-weight="700" x-text="'$' + yTick.val.toLocaleString()"></text>
                 </g>
               </template>
 
-              <!-- DATE X-AXIS LABELS & TICKS (Dynamic or Baseline Grid) -->
+              <!-- X-AXIS LABELS -->
               <template x-for="xTick in getXScales()" :key="xTick.date">
                 <g>
-                  <!-- X-Axis Tick Mark -->
                   <line :x1="xTick.x" y1="175" :x2="xTick.x" y2="181" stroke="#94a3b8" stroke-width="1.5" />
-                  <!-- Actual Date String Label -->
                   <text :x="xTick.x" y="196" fill="#cbd5e1" font-size="10" font-weight="700" text-anchor="middle" x-text="xTick.dateStr"></text>
                 </g>
               </template>
 
-              <!-- GRAPH GRADIENT AREA -->
+              <!-- GRADIENT FILL -->
               <template x-if="timelineData.length > 0">
                 <path :d="generateGraphAreaPath()" fill="url(#chartGradient)" />
               </template>
 
-              <!-- CLEARED BALANCE TRAJECTORY -->
+              <!-- CLEARED & FUTURE PATHS -->
               <template x-if="timelineData.length > 0">
                 <path :d="generateGraphPath('cleared')" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
               </template>
               
-              <!-- FUTURE BALANCE TRAJECTORY -->
               <template x-if="timelineData.length > 0">
                 <path :d="generateGraphPath('future')" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round" />
               </template>
 
-              <!-- TODAY DASHED SEPARATOR LINE -->
+              <!-- TODAY LINE -->
               <template x-if="timelineData.length > 0 && getTodayXPosition()">
                 <g>
                   <line :x1="getTodayXPosition()" y1="20" :x2="getTodayXPosition()" y2="175" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="4 3" />
@@ -194,7 +184,7 @@
                 </g>
               </template>
 
-              <!-- DATA POINT NODES -->
+              <!-- DATA POINTS -->
               <template x-for="(pt, idx) in getGraphPoints()" :key="idx">
                 <circle
                   :cx="pt.x"
@@ -208,7 +198,7 @@
               </template>
             </svg>
 
-            <!-- Dynamic Hover Tooltip -->
+            <!-- HOVER TOOLTIP -->
             <div 
               x-show="hoveredPoint" 
               class="absolute top-2 right-2 bg-slate-900/95 border border-slate-700 px-3 py-1.5 rounded-xl shadow-2xl text-xs space-y-0.5 backdrop-blur-md z-30 pointer-events-none"
@@ -273,7 +263,6 @@
         <!-- Dynamic T-Chart Containers -->
         <div class="grid grid-cols-2 gap-0 border border-slate-800 rounded-xl flex-1 min-h-0 relative bg-slate-950/60">
           
-          <!-- Central Dashed Divider -->
           <div class="absolute inset-y-0 left-1/2 w-0 border-r-2 border-dashed border-slate-800 z-10 pointer-events-none"></div>
 
           <!-- LEFT COLUMN: DEPOSITS (+) -->
@@ -681,14 +670,14 @@
         generateGraphPath(filterStatus) {
           const points = this.getGraphPoints();
           if (points.length === 0) return "";
-          const height = 220, paddingLeft = 85, paddingBottom = 45, paddingTop = 25;
+          const height = 220, paddingLeft = 85, paddingBottom = 45;
           const data = this.getCalculatedGraphData();
           const balances = data.map(d => d.balance);
           const base = Number(this.startingBalance) || 0;
           const minBal = Math.min(...balances, base, 0);
           const maxBal = Math.max(...balances, base, 100);
           const balRange = maxBal - minBal || 1;
-          const usableHeight = height - paddingBottom - paddingTop;
+          const usableHeight = height - paddingBottom - 25;
           
           const startY = height - paddingBottom - ((base - minBal) / balRange) * usableHeight;
           
