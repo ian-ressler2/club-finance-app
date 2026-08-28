@@ -174,29 +174,55 @@
   <header x-show="user && activeClubId" class="border-b border-slate-800/80 bg-slate-900/80 backdrop-blur-md px-6 py-2.5 flex-none sticky top-0 z-40">
     <div class="w-full flex items-center justify-between gap-4 flex-wrap">
       <div class="flex items-center gap-3">
-        <button @click="leaveClub()" class="text-slate-500 hover:text-white text-xs font-bold px-1" title="Back to My Clubs">←</button>
-        <h1 class="text-lg font-extrabold tracking-tight text-white flex items-center gap-2">
-          <span class="p-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">🛡️</span> <span x-text="clubName || 'Club Financial Hub'"></span>
-        </h1>
+        <button @click="leaveClub()" class="text-slate-500 hover:text-white text-xs font-bold px-1" title="Back to My Clubs" aria-label="Back to My Clubs">←</button>
+        <div>
+          <h1 class="text-lg font-extrabold tracking-tight text-white flex items-center gap-2">
+            <span class="p-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">🛡️</span> <span x-text="clubName || 'Club Financial Hub'"></span>
+            <button x-show="can('admin')" @click="openClubSettings()" class="text-slate-500 hover:text-slate-200 text-xs" title="Club settings" aria-label="Club settings">⚙</button>
+          </h1>
+          <p x-show="clubContactEmail" class="text-[10px] text-slate-500 pl-8" x-text="clubContactEmail"></p>
+        </div>
       </div>
 
       <div class="flex items-center gap-2 flex-wrap">
         <div class="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl shadow-inner">
           <span class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black text-white flex-none" :class="avatarColor(user?.name || user?.email)" :title="user?.email" x-text="initials(user?.name || user?.email)"></span>
-          <span class="text-xs font-semibold text-slate-300" x-text="user?.name || user?.email"></span>
+          <template x-if="!editingMyName">
+            <button @click="startEditMyName()" class="text-xs font-semibold text-slate-300 hover:text-white hover:underline decoration-dashed underline-offset-2" title="Click to set/edit your name">
+              <span x-text="user?.name || user?.email"></span>
+              <span x-show="!user?.name" class="text-amber-400 font-bold ml-0.5">· set name</span>
+            </button>
+          </template>
+          <template x-if="editingMyName">
+            <form @submit.prevent="saveMyName()" class="flex items-center gap-1">
+              <input type="text" x-model="myNameInput" autofocus placeholder="Your name" class="bg-slate-950 border border-slate-700 text-xs text-white rounded px-1.5 py-0.5 w-28 focus:outline-none focus:border-emerald-500">
+              <button type="submit" class="text-emerald-400 hover:text-emerald-300 text-xs font-bold">✓</button>
+              <button type="button" @click="editingMyName = false" class="text-slate-500 hover:text-rose-400 text-xs font-bold" aria-label="Cancel">✕</button>
+            </form>
+          </template>
           <span class="text-[9px] font-bold px-2 py-0.5 rounded border cursor-help"
                 :class="myRole() === 'admin' ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : (myRole() === 'officer' ? 'text-blue-400 border-blue-500/30 bg-blue-500/10' : 'text-slate-400 border-slate-700 bg-slate-800/50')"
                 :title="myRole() === 'admin' ? 'Admin: full control — settings, dues, members, roles' : (myRole() === 'officer' ? 'Officer: can add/edit transactions, roster, and approve join requests' : 'Viewer: read-only access')"
                 x-text="myRole()"></span>
           <span x-show="Object.keys(clubJoinRequests).length > 0 && can('officer')" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 animate-pulse" x-text="Object.keys(clubJoinRequests).length + ' pending'"></span>
         </div>
+        <button @click="showActivityLog = true" class="text-[10px] font-bold text-slate-400 hover:text-white px-2.5 py-1.5 rounded-lg border border-slate-800 hover:border-slate-700 transition" title="View activity log">📜 Activity</button>
+        <button @click="leaveClubMembership()" class="text-[10px] font-bold text-slate-400 hover:text-amber-400 px-2.5 py-1.5 rounded-lg border border-slate-800 hover:border-amber-500/30 transition" title="Leave this club">Leave Club</button>
         <button @click="logout()" class="text-[10px] font-bold text-slate-400 hover:text-rose-400 px-2.5 py-1.5 rounded-lg border border-slate-800 hover:border-rose-500/30 transition">Sign Out</button>
       </div>
     </div>
   </header>
 
   <!-- MAIN LAYOUT -->
-  <main x-show="user && activeClubId" class="flex-1 w-full p-4 grid grid-rows-[auto_auto_auto_1fr] gap-4 max-w-[1600px] mx-auto">
+  <main x-show="user && activeClubId" class="relative flex-1 w-full p-4 grid grid-rows-[auto_auto_auto_1fr] gap-4 max-w-[1600px] mx-auto">
+
+    <!-- CLUB LOADING OVERLAY -->
+    <div x-show="!clubDataLoaded" x-transition:leave="transition ease-in duration-300" x-transition:leave-end="opacity-0" class="absolute inset-0 bg-slate-950 z-30 flex items-center justify-center">
+      <div class="flex items-center gap-2.5 text-slate-500 text-sm font-semibold">
+        <span class="w-4 h-4 border-2 border-slate-700 border-t-emerald-400 rounded-full animate-spin"></span>
+        Loading club…
+      </div>
+    </div>
 
     <!-- SHORTFALL WARNING -->
     <div x-show="getShortfallWarning()" x-transition class="flex-none flex items-center gap-2 bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-semibold px-3.5 py-2 rounded-xl">
@@ -243,14 +269,17 @@
           </div>
         </div>
 
-        <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 shadow-lg flex items-center justify-between">
+        <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 shadow-lg flex items-center justify-between flex-wrap gap-y-2">
           <span class="text-xs font-semibold text-slate-300">Quick Actions</span>
-          <div class="flex gap-2">
+          <div class="flex gap-2 flex-wrap justify-end">
             <button x-show="can('officer')" @click="openTxForm()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-lg transition shadow-md">
               + Transaction
             </button>
             <button x-show="can('officer')" @click="showMemberForm = !showMemberForm" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-lg transition shadow-md">
               + Member
+            </button>
+            <button @click="showBreakdown = true" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-3 py-1 rounded-lg transition shadow-md">
+              📊 Breakdown
             </button>
             <button @click="exportCsv()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-3 py-1 rounded-lg transition shadow-md">
               ⬇ Export
@@ -392,7 +421,7 @@
               <template x-if="row.kind === 'today'">
                 <div class="relative flex items-center my-2 z-10"
                      @dragover.prevent="dragHoverKey = 'today'"
-                     @drop="handleDrop($event, 'deposit', todayStr)">
+                     @drop="handleDrop($event, draggedItem ? draggedItem.type : 'deposit', todayStr)">
                   <div class="flex-1 border-t border-dashed border-cyan-500/50"></div>
                   <span class="mx-2 text-[9px] font-black text-cyan-400 bg-cyan-500/10 border border-cyan-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider">Today · <span x-text="formatDate(todayStr)"></span></span>
                   <div class="flex-1 border-t border-dashed border-cyan-500/50"></div>
@@ -424,7 +453,7 @@
                         </div>
                         <div class="flex items-center gap-2 flex-none">
                           <span class="text-xs font-bold font-mono" :class="isUpcoming(item.date) ? 'text-slate-400' : 'text-emerald-400'" x-text="'+$' + Number(item.amount).toFixed(2)"></span>
-                          <button x-show="can('officer')" @click="deleteTransaction(item.id)" class="text-slate-600 hover:text-rose-400 text-xs">✕</button>
+                          <button x-show="can('officer')" @click="deleteTransaction(item.id)" class="text-slate-600 hover:text-rose-400 text-xs" aria-label="Delete transaction">✕</button>
                         </div>
                       </div>
                     </template>
@@ -444,7 +473,7 @@
                            class="draggable-item bg-slate-900 border p-2 rounded-lg flex items-center justify-between gap-2 shadow-md w-full max-w-[280px] hover:shadow-xl hover:brightness-110 transition"
                            :class="isUpcoming(item.date) ? 'border-slate-800 bg-slate-900/40 text-slate-400' : 'border-rose-900/60 text-rose-300'">
                         <div class="flex items-center gap-2 flex-none">
-                          <button x-show="can('officer')" @click="deleteTransaction(item.id)" class="text-slate-600 hover:text-rose-400 text-xs">✕</button>
+                          <button x-show="can('officer')" @click="deleteTransaction(item.id)" class="text-slate-600 hover:text-rose-400 text-xs" aria-label="Delete transaction">✕</button>
                           <span class="text-xs font-bold font-mono" :class="isUpcoming(item.date) ? 'text-slate-400' : 'text-rose-400'" x-text="'-$' + Number(item.amount).toFixed(2)"></span>
                         </div>
                         <div class="min-w-0 text-right">
@@ -513,7 +542,7 @@
                           class="text-[9px] font-bold px-2 py-0.5 rounded transition border"
                           :class="member.duesPaid ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border-rose-500/30'"
                           x-text="member.duesPaid ? 'Paid ✓' : 'Unpaid !'"></button>
-                  <button x-show="can('admin')" @click="removeMember(member.id)" class="text-slate-600 hover:text-rose-400 text-xs">✕</button>
+                  <button x-show="can('admin')" @click="removeMember(member.id)" class="text-slate-600 hover:text-rose-400 text-xs" aria-label="Remove from roster">✕</button>
                 </div>
               </div>
               <div class="mt-1.5 flex items-center gap-2">
@@ -548,7 +577,7 @@
                   </div>
                   <div class="flex items-center gap-1.5 flex-none">
                     <button @click="approveRequest(uid, req.email, req.name)" class="text-[9px] font-bold bg-emerald-600 hover:bg-emerald-500 hover:scale-105 text-white px-2 py-0.5 rounded transition">Approve</button>
-                    <button @click="denyRequest(uid)" class="text-[9px] font-bold bg-slate-800 hover:bg-rose-600 hover:scale-105 text-slate-300 hover:text-white px-2 py-0.5 rounded transition">Deny</button>
+                    <button @click="denyRequest(uid, req.email, req.name)" class="text-[9px] font-bold bg-slate-800 hover:bg-rose-600 hover:scale-105 text-slate-300 hover:text-white px-2 py-0.5 rounded transition">Deny</button>
                   </div>
                 </div>
               </template>
@@ -570,7 +599,7 @@
                       <option value="officer">Officer</option>
                       <option value="admin">Admin</option>
                     </select>
-                    <button @click="removeClubMember(uid)" class="text-slate-600 hover:text-rose-400 text-xs transition">✕</button>
+                    <button @click="removeClubMember(uid)" class="text-slate-600 hover:text-rose-400 text-xs transition" aria-label="Remove club member">✕</button>
                   </div>
                 </div>
               </template>
@@ -583,22 +612,106 @@
 
   </main>
 
+  <!-- CLUB SETTINGS MODAL -->
+  <div x-show="showClubSettings" x-cloak class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-transition>
+    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl max-w-sm w-full space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">⚙ Club Settings</h3>
+        <button @click="showClubSettings = false" class="text-slate-500 hover:text-white text-sm" aria-label="Close">✕</button>
+      </div>
+
+      <form @submit.prevent="saveClubSettings()" class="space-y-2.5">
+        <div>
+          <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Club Name</label>
+          <input type="text" x-model="clubSettingsForm.name" required class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500">
+        </div>
+        <div>
+          <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Contact Email <span class="text-slate-600 normal-case font-normal">(optional)</span></label>
+          <input type="email" x-model="clubSettingsForm.contactEmail" class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="myclub@school.edu">
+        </div>
+        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold py-2 rounded-lg transition">Save Changes</button>
+      </form>
+
+      <div class="pt-3 border-t border-slate-800">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-rose-400 mb-1.5">Danger Zone</p>
+        <button @click="deleteClub()" class="w-full bg-rose-950/60 hover:bg-rose-900 border border-rose-800 text-rose-300 text-xs font-bold py-2 rounded-lg transition">
+          Delete This Club Permanently
+        </button>
+        <p class="text-[10px] text-slate-600 mt-1.5">Removes all transactions, dues, and member access for everyone. Cannot be undone.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACTIVITY LOG MODAL -->
+  <div x-show="showActivityLog" x-cloak class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-transition>
+    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl max-w-md w-full shadow-2xl max-h-[80vh] flex flex-col">
+      <div class="flex items-center justify-between mb-3 flex-none">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">📜 Activity Log</h3>
+        <button @click="showActivityLog = false" class="text-slate-500 hover:text-white text-sm" aria-label="Close">✕</button>
+      </div>
+      <div class="overflow-y-auto space-y-2 pr-1">
+        <template x-if="activityLog.length === 0">
+          <p class="text-center py-8 text-slate-600 text-xs italic">No activity recorded yet.</p>
+        </template>
+        <template x-for="entry in activityLog" :key="entry.ts + entry.actor">
+          <div class="flex items-start gap-2 bg-slate-950/60 border border-slate-800 rounded-lg p-2.5">
+            <span class="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black text-white flex-none mt-0.5" :class="avatarColor(entry.actor)" x-text="initials(entry.actor)"></span>
+            <p class="text-xs text-slate-300 leading-snug">
+              <span class="font-bold text-slate-100" x-text="entry.actor"></span>
+              <span x-text="' ' + entry.action"></span>
+              <span class="block text-[10px] text-slate-500 mt-0.5" x-text="relativeTime(entry.ts)"></span>
+            </p>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- SPENDING BREAKDOWN MODAL -->
+  <div x-show="showBreakdown" x-cloak class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-transition>
+    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl max-w-md w-full shadow-2xl max-h-[80vh] flex flex-col">
+      <div class="flex items-center justify-between mb-3 flex-none">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">📊 Spending by Category</h3>
+        <button @click="showBreakdown = false" class="text-slate-500 hover:text-white text-sm" aria-label="Close">✕</button>
+      </div>
+      <p class="text-[10px] text-slate-500 mb-3 flex-none">Cleared withdrawals only, grouped by category.</p>
+      <div class="overflow-y-auto space-y-2.5">
+        <template x-if="getCategoryBreakdown().length === 0">
+          <p class="text-center py-8 text-slate-600 text-xs italic">No cleared withdrawals yet.</p>
+        </template>
+        <template x-for="c in getCategoryBreakdown()" :key="c.cat">
+          <div>
+            <div class="flex items-center justify-between text-xs mb-1">
+              <span class="font-semibold px-1.5 py-0.5 rounded border" :class="categoryClass(c.cat)" x-text="c.cat"></span>
+              <span class="text-slate-300 font-bold" x-text="'$' + c.amt.toFixed(2) + ' · ' + c.pct.toFixed(0) + '%'"></span>
+            </div>
+            <div class="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+              <div class="h-full rounded-full transition-all" :class="categoryBarClass(c.cat)" :style="'width:' + c.pct + '%'"></div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+
   <!-- TOAST NOTIFICATIONS -->
   <div class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 items-end pointer-events-none">
     <template x-for="t in toasts" :key="t.id">
       <div x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2"
            x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150"
            x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-           class="pointer-events-auto max-w-xs px-3.5 py-2 rounded-xl shadow-2xl border text-xs font-semibold backdrop-blur-md"
-           :class="t.tone === 'info' ? 'bg-slate-900/95 border-slate-700 text-slate-300' : 'bg-emerald-600/95 border-emerald-500 text-white'"
-           x-text="t.message"></div>
+           class="pointer-events-auto max-w-xs px-3.5 py-2 rounded-xl shadow-2xl border text-xs font-semibold backdrop-blur-md flex items-center gap-3"
+           :class="t.tone === 'info' ? 'bg-slate-900/95 border-slate-700 text-slate-300' : 'bg-emerald-600/95 border-emerald-500 text-white'">
+        <span x-text="t.message"></span>
+        <button x-show="t.hasUndo" @click="runUndo(t)" class="text-amber-300 hover:text-amber-200 font-bold underline flex-none">Undo</button>
+      </div>
     </template>
   </div>
 
   <!-- APP STATE & FIREBASE ENGINE -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, onValue, set, get, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getDatabase, ref, onValue, set, get, push, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import Alpine from "https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/module.esm.js";
 
@@ -616,6 +729,10 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const auth = getAuth(app);
+
+    // Undo callbacks live outside Alpine's reactive graph — storing a raw
+    // function inside a reactive array/object breaks its truthiness in Alpine.
+    const undoRegistry = new Map();
 
     window.financeApp = function() {
       return {
@@ -635,17 +752,26 @@
         authNotice: '',
         authLoading: false,
         toasts: [],
+        editingMyName: false,
+        myNameInput: '',
 
         showCreateClubForm: false,
         newClubForm: { name: '', contactEmail: '' },
         clubFormError: '',
         creatingClub: false,
         joinSearch: '',
+        showClubSettings: false,
+        clubSettingsForm: { name: '', contactEmail: '' },
+        clubDataLoaded: false,
+        showActivityLog: false,
+        activityLog: [],
+        showBreakdown: false,
 
         _userUnsub: null,
         _dataUnsub: null,
         _membersUnsub: null,
         _requestsUnsub: null,
+        _activityUnsub: null,
 
         // ---------- CLUB DASHBOARD STATE ----------
         clubName: '',
@@ -685,8 +811,8 @@
         },
 
         _teardownAll() {
-          [this._userUnsub, this._dataUnsub, this._membersUnsub, this._requestsUnsub].forEach(u => { if (u) u(); });
-          this._userUnsub = this._dataUnsub = this._membersUnsub = this._requestsUnsub = null;
+          [this._userUnsub, this._dataUnsub, this._membersUnsub, this._requestsUnsub, this._activityUnsub].forEach(u => { if (u) u(); });
+          this._userUnsub = this._dataUnsub = this._membersUnsub = this._requestsUnsub = this._activityUnsub = null;
         },
 
         resetAll() {
@@ -695,6 +821,7 @@
           this.activeClubId = null;
           this.clubMembers = {};
           this.clubJoinRequests = {};
+          this.activityLog = [];
           this.resetLocalState();
         },
 
@@ -732,6 +859,23 @@
           setTimeout(() => { this.toasts = this.toasts.filter(t => t.id !== id); }, 3200);
         },
 
+        toastUndo(message, undoFn) {
+          const id = this.newId();
+          undoRegistry.set(id, undoFn);
+          this.toasts.push({ id, message, tone: 'info', hasUndo: true });
+          setTimeout(() => {
+            this.toasts = this.toasts.filter(t => t.id !== id);
+            undoRegistry.delete(id);
+          }, 6000);
+        },
+
+        runUndo(t) {
+          const fn = undoRegistry.get(t.id);
+          if (fn) fn();
+          undoRegistry.delete(t.id);
+          this.toasts = this.toasts.filter(x => x.id !== t.id);
+        },
+
         initials(name) {
           if (!name) return '?';
           const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -762,22 +906,32 @@
         // ---------- CLUB ENTER/EXIT ----------
         enterClub(clubId) {
           this.activeClubId = clubId;
+          this.clubDataLoaded = false;
           this.attachClubListeners(clubId);
         },
 
         leaveClub() {
-          [this._dataUnsub, this._membersUnsub, this._requestsUnsub].forEach(u => { if (u) u(); });
-          this._dataUnsub = this._membersUnsub = this._requestsUnsub = null;
+          [this._dataUnsub, this._membersUnsub, this._requestsUnsub, this._activityUnsub].forEach(u => { if (u) u(); });
+          this._dataUnsub = this._membersUnsub = this._requestsUnsub = this._activityUnsub = null;
           this.activeClubId = null;
           this.clubMembers = {};
           this.clubJoinRequests = {};
+          this.activityLog = [];
+          this.clubDataLoaded = false;
           this.resetLocalState();
         },
 
         attachClubListeners(clubId) {
           this._dataUnsub = onValue(ref(db, `clubs/${clubId}`), (snapshot) => {
             const data = snapshot.val();
-            if (!data) return;
+            this.clubDataLoaded = true;
+            if (!data) {
+              if (this.activeClubId === clubId) {
+                this.toast('This club no longer exists', 'info');
+                this.leaveClub();
+              }
+              return;
+            }
             this.clubName = data.name ?? '';
             this.clubContactEmail = data.contactEmail ?? '';
             const fd = data.financeData ?? {};
@@ -792,6 +946,27 @@
           this._requestsUnsub = onValue(ref(db, `clubs/${clubId}/joinRequests`), (snap) => {
             this.clubJoinRequests = snap.val() || {};
           });
+          this._activityUnsub = onValue(query(ref(db, `clubs/${clubId}/activityLog`), limitToLast(50)), (snap) => {
+            const data = snap.val() || {};
+            this.activityLog = Object.values(data).sort((a, b) => new Date(b.ts) - new Date(a.ts));
+          });
+        },
+
+        logActivity(action) {
+          if (!this.activeClubId || !this.user) return;
+          push(ref(db, `clubs/${this.activeClubId}/activityLog`), {
+            actor: this.user.name || this.user.email,
+            action,
+            ts: new Date().toISOString()
+          });
+        },
+
+        relativeTime(iso) {
+          const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+          if (diff < 60) return 'just now';
+          if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+          if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+          return `${Math.floor(diff / 86400)}d ago`;
         },
 
         myRole() {
@@ -878,6 +1053,22 @@
           await signOut(auth);
         },
 
+        startEditMyName() {
+          this.myNameInput = this.user?.name || '';
+          this.editingMyName = true;
+        },
+
+        async saveMyName() {
+          const name = this.myNameInput.trim();
+          if (!name || !this.user) { this.editingMyName = false; return; }
+          await set(ref(db, `users/${this.user.uid}/name`), name);
+          if (this.activeClubId && this.clubMembers[this.user.uid]) {
+            await set(ref(db, `clubs/${this.activeClubId}/members/${this.user.uid}/name`), name);
+          }
+          this.editingMyName = false;
+          this.toast('Name updated');
+        },
+
         // ---------- CLUB CREATE / JOIN ----------
         async createClub() {
           this.clubFormError = '';
@@ -907,6 +1098,7 @@
             this.showCreateClubForm = false;
             this.enterClub(clubId);
             this.toast(`${createdName} created — you're the Admin`);
+            this.logActivity('created the club');
           } catch (err) {
             this.clubFormError = this.authErrorMessage(err);
           } finally {
@@ -951,14 +1143,16 @@
             this.roster.push({ id: this.newId(), name: displayName, role: 'Viewer', notes: '', duesPaid: false });
             this.syncToFirebase();
           }
+          this.logActivity(`approved ${displayName} as Viewer`);
           this.toast(`${displayName} approved as Viewer`);
         },
 
-        async denyRequest(uid) {
+        async denyRequest(uid, email, name) {
           if (!this.can('officer')) return;
           const clubId = this.activeClubId;
           await set(ref(db, `clubs/${clubId}/joinRequests/${uid}`), null);
           await set(ref(db, `users/${uid}/pendingRequests/${clubId}`), null);
+          this.logActivity(`denied a request from ${name || email || 'someone'}`);
           this.toast('Request denied', 'info');
         },
 
@@ -975,6 +1169,7 @@
           }
           set(ref(db, `clubs/${this.activeClubId}/members/${uid}/role`), role);
           set(ref(db, `users/${uid}/clubs/${this.activeClubId}`), role);
+          this.logActivity(`changed ${current?.name || current?.email || 'a member'}'s role to ${role}`);
           this.toast(`${current?.name || current?.email || 'Member'} is now ${role}`);
         },
 
@@ -988,11 +1183,66 @@
           if (!confirm(`Remove ${m?.name || m?.email || 'this member'} from the club?`)) return;
           set(ref(db, `clubs/${this.activeClubId}/members/${uid}`), null);
           set(ref(db, `users/${uid}/clubs/${this.activeClubId}`), null);
+          this.logActivity(`removed ${m?.name || m?.email || 'a member'} from the club`);
           this.toast(`${m?.name || m?.email || 'Member'} removed`, 'info');
         },
 
+        async leaveClubMembership() {
+          if (!this.activeClubId || !this.user) return;
+          if (this.myRole() === 'admin' && this.adminCount() <= 1) {
+            alert('You are the only Admin of this club. Promote another member to Admin before leaving.');
+            return;
+          }
+          if (!confirm(`Leave ${this.clubName}? You'll need to be re-approved to rejoin.`)) return;
+          const clubId = this.activeClubId;
+          this.logActivity('left the club');
+          await set(ref(db, `clubs/${clubId}/members/${this.user.uid}`), null);
+          await set(ref(db, `users/${this.user.uid}/clubs/${clubId}`), null);
+          this.leaveClub();
+          this.toast('You left the club', 'info');
+        },
+
+        openClubSettings() {
+          if (!this.can('admin')) return;
+          this.clubSettingsForm = { name: this.clubName, contactEmail: this.clubContactEmail };
+          this.showClubSettings = true;
+        },
+
+        async saveClubSettings() {
+          if (!this.can('admin') || !this.activeClubId) return;
+          const name = this.clubSettingsForm.name.trim();
+          if (!name) return;
+          const contactEmail = this.clubSettingsForm.contactEmail.trim();
+          await set(ref(db, `clubs/${this.activeClubId}/name`), name);
+          await set(ref(db, `clubs/${this.activeClubId}/contactEmail`), contactEmail);
+          await set(ref(db, `clubDirectory/${this.activeClubId}/name`), name);
+          this.clubDirectoryCache = { ...this.clubDirectoryCache, [this.activeClubId]: name };
+          this.showClubSettings = false;
+          this.logActivity('updated club settings');
+          this.toast('Club settings saved');
+        },
+
+        async deleteClub() {
+          if (!this.can('admin') || !this.activeClubId) return;
+          const typed = prompt(`This permanently deletes "${this.clubName}" — all transactions, dues, and member access for everyone. Type the club name to confirm.`);
+          if (typed === null) return;
+          if (typed !== this.clubName) { alert('Name did not match. Deletion cancelled.'); return; }
+          const clubId = this.activeClubId;
+          const deletedName = this.clubName || 'Club';
+          const memberUids = Object.keys(this.clubMembers);
+          await Promise.all(memberUids.map(uid => set(ref(db, `users/${uid}/clubs/${clubId}`), null)));
+          await set(ref(db, `clubDirectory/${clubId}`), null);
+          await set(ref(db, `clubs/${clubId}`), null);
+          this.showClubSettings = false;
+          this.leaveClub();
+          this.toast(`${deletedName} deleted`, 'info');
+        },
+
         toggleEditStarting() {
-          if (this.editingStarting) this.syncToFirebase();
+          if (this.editingStarting) {
+            this.syncToFirebase();
+            this.logActivity(`set the starting balance to $${Number(this.startingBalance).toFixed(2)}`);
+          }
           this.editingStarting = !this.editingStarting;
         },
 
@@ -1017,6 +1267,33 @@
             'Other': 'bg-slate-500/10 text-slate-400 border-slate-500/30'
           };
           return map[cat] || map['Other'];
+        },
+
+        categoryBarClass(cat) {
+          const map = {
+            'Dues': 'bg-purple-500',
+            'Fundraising': 'bg-emerald-500',
+            'Merchandise': 'bg-blue-500',
+            'Events': 'bg-pink-500',
+            'Equipment': 'bg-amber-500',
+            'Travel': 'bg-cyan-500',
+            'Other': 'bg-slate-500'
+          };
+          return map[cat] || map['Other'];
+        },
+
+        getCategoryBreakdown() {
+          const totals = {};
+          this.transactions
+            .filter(t => t.type === 'expense' && !this.isUpcoming(t.date))
+            .forEach(t => {
+              const cat = t.category || 'Other';
+              totals[cat] = (totals[cat] || 0) + Number(t.amount);
+            });
+          const total = Object.values(totals).reduce((a, b) => a + b, 0);
+          return Object.entries(totals)
+            .map(([cat, amt]) => ({ cat, amt, pct: total ? (amt / total) * 100 : 0 }))
+            .sort((a, b) => b.amt - a.amt);
         },
 
         getFilteredTransactions() {
@@ -1285,27 +1562,37 @@
             });
           }
           this.syncToFirebase();
+          const addedSource = this.newTx.source;
           this.newTx = { source: '', amount: '', type: 'deposit', date: this.todayStr, notes: '', category: 'Other', repeatMonthly: false, repeatCount: 3 };
           this.showTxForm = false;
+          this.logActivity(occurrences > 1 ? `added ${occurrences} recurring "${addedSource}" transactions` : `added "${addedSource}"`);
           this.toast(occurrences > 1 ? `${occurrences} recurring transactions added` : 'Transaction added');
         },
 
         deleteTransaction(id) {
           const tx = this.transactions.find(t => t.id === id);
           if (!tx) return;
-          const seriesNote = tx.recurringGroup ? ' This is one occurrence of a recurring transaction — only this date will be deleted.' : '';
-          if (!confirm(`Delete "${tx.source}" (${tx.type === 'deposit' ? '+' : '-'}$${Number(tx.amount).toFixed(2)})?${seriesNote}`)) return;
           this.transactions = this.transactions.filter(t => t.id !== id);
+          let affectedMember = null;
           if (tx.duesFor) {
-            const m = this.roster.find(m => m.id === tx.duesFor);
-            if (m) m.duesPaid = false;
+            affectedMember = this.roster.find(m => m.id === tx.duesFor);
+            if (affectedMember) affectedMember.duesPaid = false;
           }
           this.syncToFirebase();
-          this.toast('Transaction deleted', 'info');
+          this.logActivity(`deleted "${tx.source}" (${tx.type === 'deposit' ? '+' : '-'}$${Number(tx.amount).toFixed(2)})`);
+          this.toastUndo(`Deleted "${tx.source}"`, () => {
+            this.transactions.push(tx);
+            if (affectedMember) affectedMember.duesPaid = true;
+            this.syncToFirebase();
+            this.logActivity(`undid the deletion of "${tx.source}"`);
+          });
         },
 
         toggleEditDues() {
-          if (this.editingDues) this.syncToFirebase();
+          if (this.editingDues) {
+            this.syncToFirebase();
+            this.logActivity(`set dues amount to $${Number(this.duesAmount).toFixed(2)}`);
+          }
           this.editingDues = !this.editingDues;
         },
 
@@ -1323,6 +1610,7 @@
           const addedName = this.newMember.name;
           this.newMember = { name: '', role: 'Viewer', notes: '' };
           this.showMemberForm = false;
+          this.logActivity(`added ${addedName} to the roster`);
           this.toast(`${addedName} added to roster`);
         },
 
@@ -1332,6 +1620,7 @@
           this.roster = this.roster.filter(m => m.id !== id);
           this.transactions = this.transactions.filter(t => t.duesFor !== id);
           this.syncToFirebase();
+          this.logActivity(`removed ${m?.name || 'a member'} from the roster`);
           this.toast(`${m?.name || 'Member'} removed`, 'info');
         },
 
@@ -1380,6 +1669,7 @@
             this.transactions = this.transactions.filter(t => t.duesFor !== m.id);
           }
           this.syncToFirebase();
+          this.logActivity(`marked ${m.name} dues ${m.duesPaid ? 'paid' : 'unpaid'}`);
           this.toast(`${m.name} marked ${m.duesPaid ? 'paid' : 'unpaid'}`);
         }
       }
