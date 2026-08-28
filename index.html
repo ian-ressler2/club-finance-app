@@ -186,9 +186,27 @@
           <div>
             <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Theme Colors <span class="text-slate-600 normal-case font-normal">(change anytime later in Club Settings)</span></label>
             <div class="grid grid-cols-3 gap-2 mt-1">
-              <input type="color" x-model="newClubForm.theme.primary" class="w-full h-8 rounded-lg border border-[var(--cc-border)] bg-[var(--cc-bg)] cursor-pointer" title="Primary">
-              <input type="color" x-model="newClubForm.theme.accent" class="w-full h-8 rounded-lg border border-[var(--cc-border)] bg-[var(--cc-bg)] cursor-pointer" title="Accent">
-              <input type="color" x-model="newClubForm.theme.highlight" class="w-full h-8 rounded-lg border border-[var(--cc-border)] bg-[var(--cc-bg)] cursor-pointer" title="Highlight">
+              <div>
+                <div class="flex items-center gap-1">
+                  <input type="color" x-model="newClubForm.theme.primary" class="w-8 h-8 flex-none rounded-lg border border-[var(--cc-border)] bg-[var(--cc-bg)] cursor-pointer" title="Primary">
+                  <input type="text" x-model.lazy="newClubForm.theme.primary" @change="newClubForm.theme.primary = normalizeHex(newClubForm.theme.primary, '#059669')" placeholder="#C8102E" class="w-full min-w-0 bg-[var(--cc-bg)] border border-[var(--cc-border)] text-[10px] font-mono text-[var(--cc-text)] rounded-lg px-1.5 py-1.5 focus:outline-none focus:border-emerald-500">
+                </div>
+                <p class="text-[9px] text-[var(--cc-text-muted)] text-center mt-0.5">Primary</p>
+              </div>
+              <div>
+                <div class="flex items-center gap-1">
+                  <input type="color" x-model="newClubForm.theme.accent" class="w-8 h-8 flex-none rounded-lg border border-[var(--cc-border)] bg-[var(--cc-bg)] cursor-pointer" title="Accent">
+                  <input type="text" x-model.lazy="newClubForm.theme.accent" @change="newClubForm.theme.accent = normalizeHex(newClubForm.theme.accent, '#2563eb')" placeholder="#F1BE48" class="w-full min-w-0 bg-[var(--cc-bg)] border border-[var(--cc-border)] text-[10px] font-mono text-[var(--cc-text)] rounded-lg px-1.5 py-1.5 focus:outline-none focus:border-emerald-500">
+                </div>
+                <p class="text-[9px] text-[var(--cc-text-muted)] text-center mt-0.5">Accent</p>
+              </div>
+              <div>
+                <div class="flex items-center gap-1">
+                  <input type="color" x-model="newClubForm.theme.highlight" class="w-8 h-8 flex-none rounded-lg border border-[var(--cc-border)] bg-[var(--cc-bg)] cursor-pointer" title="Highlight">
+                  <input type="text" x-model.lazy="newClubForm.theme.highlight" @change="newClubForm.theme.highlight = normalizeHex(newClubForm.theme.highlight, '#f59e0b')" placeholder="#BE531C" class="w-full min-w-0 bg-[var(--cc-bg)] border border-[var(--cc-border)] text-[10px] font-mono text-[var(--cc-text)] rounded-lg px-1.5 py-1.5 focus:outline-none focus:border-emerald-500">
+                </div>
+                <p class="text-[9px] text-[var(--cc-text-muted)] text-center mt-0.5">Highlight</p>
+              </div>
             </div>
           </div>
           <p x-show="clubFormError" class="text-[11px] text-rose-400" x-text="clubFormError"></p>
@@ -821,15 +839,24 @@
           <p class="text-[10px] text-slate-600 mb-1.5">Sets the club's accent colors across the dashboard (buttons, the balance graph, and highlights).</p>
           <div class="grid grid-cols-3 gap-2">
             <div>
-              <input type="color" x-model="clubThemeForm.primary" class="w-full h-8 rounded-lg border border-[var(--cc-border)] bg-[var(--cc-bg)] cursor-pointer">
+              <div class="flex items-center gap-1">
+                <input type="color" x-model="clubThemeForm.primary" class="w-8 h-8 flex-none rounded-lg border border-[var(--cc-border)] bg-[var(--cc-bg)] cursor-pointer">
+                <input type="text" x-model.lazy="clubThemeForm.primary" @change="clubThemeForm.primary = normalizeHex(clubThemeForm.primary, '#059669')" placeholder="#C8102E" class="w-full min-w-0 bg-[var(--cc-bg)] border border-[var(--cc-border)] text-[10px] font-mono text-[var(--cc-text)] rounded-lg px-1.5 py-1.5 focus:outline-none focus:border-emerald-500">
+              </div>
               <p class="text-[9px] text-[var(--cc-text-muted)] text-center mt-0.5">Primary</p>
             </div>
             <div>
-              <input type="color" x-model="clubThemeForm.accent" class="w-full h-8 rounded-lg border border-[var(--cc-border)] bg-[var(--cc-bg)] cursor-pointer">
+              <div class="flex items-center gap-1">
+                <input type="color" x-model="clubThemeForm.accent" class="w-8 h-8 flex-none rounded-lg border border-[var(--cc-border)] bg-[var(--cc-bg)] cursor-pointer">
+                <input type="text" x-model.lazy="clubThemeForm.accent" @change="clubThemeForm.accent = normalizeHex(clubThemeForm.accent, '#2563eb')" placeholder="#F1BE48" class="w-full min-w-0 bg-[var(--cc-bg)] border border-[var(--cc-border)] text-[10px] font-mono text-[var(--cc-text)] rounded-lg px-1.5 py-1.5 focus:outline-none focus:border-emerald-500">
+              </div>
               <p class="text-[9px] text-[var(--cc-text-muted)] text-center mt-0.5">Accent</p>
             </div>
             <div>
-              <input type="color" x-model="clubThemeForm.highlight" class="w-full h-8 rounded-lg border border-[var(--cc-border)] bg-[var(--cc-bg)] cursor-pointer">
+              <div class="flex items-center gap-1">
+                <input type="color" x-model="clubThemeForm.highlight" class="w-8 h-8 flex-none rounded-lg border border-[var(--cc-border)] bg-[var(--cc-bg)] cursor-pointer">
+                <input type="text" x-model.lazy="clubThemeForm.highlight" @change="clubThemeForm.highlight = normalizeHex(clubThemeForm.highlight, '#f59e0b')" placeholder="#BE531C" class="w-full min-w-0 bg-[var(--cc-bg)] border border-[var(--cc-border)] text-[10px] font-mono text-[var(--cc-text)] rounded-lg px-1.5 py-1.5 focus:outline-none focus:border-emerald-500">
+              </div>
               <p class="text-[9px] text-[var(--cc-text-muted)] text-center mt-0.5">Highlight</p>
             </div>
           </div>
@@ -1663,6 +1690,18 @@
 
         resetClubTheme() {
           this.clubThemeForm = { primary: '#059669', accent: '#2563eb', highlight: '#f59e0b' };
+        },
+
+        // Accepts a typed hex code with or without "#" and pads short (3-digit)
+        // hex to full length; falls back to `fallback` if it's not a valid hex
+        // color at all (so a stray typo can't leave the theme in a broken state).
+        normalizeHex(raw, fallback) {
+          let v = (raw || '').trim();
+          if (!v.startsWith('#')) v = '#' + v;
+          if (/^#[0-9A-Fa-f]{3}$/.test(v)) {
+            v = '#' + v.slice(1).split('').map(c => c + c).join('');
+          }
+          return /^#[0-9A-Fa-f]{6}$/.test(v) ? v.toLowerCase() : fallback;
         },
 
         async saveClubSettings() {
