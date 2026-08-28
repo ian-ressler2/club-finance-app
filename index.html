@@ -246,10 +246,10 @@
 
   <!-- TOP HEADER -->
   <header x-show="user && activeClubId" class="border-b border-[color-mix(in_srgb,var(--cc-border)_80%,transparent)] bg-[color-mix(in_srgb,var(--cc-surface)_80%,transparent)] backdrop-blur-md px-6 py-2.5 flex-none sticky top-0 z-40">
-    <div class="w-full flex items-center justify-between gap-4">
+    <div class="w-full flex items-center justify-between flex-wrap gap-x-4 gap-y-2">
 
       <!-- LEFT: club identity — click to open club settings (admin only) -->
-      <div class="flex items-center gap-3 min-w-0 flex-none">
+      <div class="flex items-center gap-3 min-w-0">
         <button @click="leaveClub()" class="text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] text-xs font-bold px-1 flex-none" title="Back to My Clubs" aria-label="Back to My Clubs">←</button>
         <div @click="can('admin') && openClubSettings()" :class="can('admin') ? 'cursor-pointer hover:opacity-80' : ''" class="transition min-w-0" :title="can('admin') ? 'Click to edit club settings' : ''">
           <h1 class="text-lg font-extrabold tracking-tight text-[var(--cc-text)] flex items-center gap-2 min-w-0">
@@ -276,7 +276,7 @@
       </div>
 
       <!-- RIGHT: role/pending badges, activity, account avatar menu -->
-      <div class="flex items-center gap-2 flex-none">
+      <div class="flex items-center gap-2 flex-none ml-auto">
         <span class="text-[9px] font-bold px-2 py-0.5 rounded border cursor-help hidden sm:inline"
               :class="myRole() === 'admin' ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : (myRole() === 'officer' ? 'text-blue-400 border-blue-500/30 bg-blue-500/10' : 'text-[var(--cc-text-muted)] border-[var(--cc-border)] bg-[var(--cc-chip)]/50')"
               :title="myRole() === 'admin' ? 'Admin: full control — settings, dues, members, roles' : (myRole() === 'officer' ? 'Officer: can add/edit transactions, roster, and approve join requests' : 'Viewer: read-only access')"
@@ -415,7 +415,7 @@
       <div class="lg:col-span-8 bg-[color-mix(in_srgb,var(--cc-surface)_60%,transparent)] border border-[var(--cc-border)] rounded-xl p-3.5 shadow-lg flex flex-col justify-between">
         <div class="flex justify-between items-center mb-1 flex-wrap gap-y-1.5">
           <h2 class="text-xs font-bold text-[var(--cc-text)] flex items-center gap-2">📈 Balance Over Time</h2>
-          <div class="flex items-center gap-3 text-[10px]">
+          <div class="flex items-center flex-wrap gap-3 text-[10px] max-w-full">
             <span class="flex items-center gap-1 text-emerald-400"><span class="w-2.5 h-0.5 bg-emerald-400 inline-block"></span> Cleared</span>
             <span class="flex items-center gap-1 text-[var(--cc-text-muted)]"><span class="w-2.5 h-0.5 border-b border-dashed border-slate-400 inline-block"></span> Scheduled</span>
             <span class="flex items-center gap-1 text-cyan-400"><span class="w-2.5 h-0.5 border-b border-dashed border-cyan-400 inline-block"></span> Today</span>
@@ -500,6 +500,11 @@
 
         <div x-ref="timelineScroll" class="relative flex-1 min-h-0 overflow-y-auto border border-[var(--cc-border)] rounded-xl bg-[color-mix(in_srgb,var(--cc-bg)_60%,transparent)] px-2 py-3">
           <div class="relative">
+          <!-- deposit/withdrawal side tint — a faint green wash on the left half,
+               red on the right, so the two sides read as distinct zones at a glance.
+               Only meaningful once the two columns actually exist (sm: and up). -->
+          <div class="hidden sm:block absolute inset-0 pointer-events-none" style="background: linear-gradient(to right, rgba(16,185,129,0.06) 0%, rgba(16,185,129,0.06) 50%, rgba(244,63,94,0.06) 50%, rgba(244,63,94,0.06) 100%);"></div>
+
           <!-- center spine (only meaningful once deposits/withdrawals split into two columns) —
                lives inside this content wrapper (not the scroll container) so inset-y-0 spans
                the full scrollable content height, not just the visible viewport. -->
