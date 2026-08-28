@@ -16,7 +16,7 @@
     .drop-zone-active { background-color: rgba(16, 185, 129, 0.06); }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen w-screen flex flex-col font-sans antialiased" x-data="financeApp()" x-cloak>
+<body class="bg-slate-950 text-slate-100 h-screen w-screen flex flex-col font-sans antialiased overflow-y-auto" x-data="financeApp()" x-cloak>
 
   <!-- AUTH GATE (person-level account, no club tied to it) -->
   <div x-show="!user" x-cloak class="flex-1 w-full flex items-center justify-center p-4">
@@ -214,7 +214,7 @@
   </header>
 
   <!-- MAIN LAYOUT -->
-  <main x-show="user && activeClubId" class="relative flex-1 w-full p-4 grid grid-rows-[auto_auto_auto_1fr] gap-4 max-w-[1600px] mx-auto">
+  <main x-show="user && activeClubId" class="relative flex-1 min-h-0 w-full p-4 grid grid-rows-[auto_auto_auto_1fr] gap-4 max-w-[1600px] mx-auto">
 
     <!-- CLUB LOADING OVERLAY -->
     <div x-show="!clubDataLoaded" x-transition:leave="transition ease-in duration-300" x-transition:leave-end="opacity-0" class="absolute inset-0 bg-slate-950 z-30 flex items-center justify-center">
@@ -300,8 +300,8 @@
           </div>
         </div>
 
-        <div class="relative bg-slate-950 border border-slate-800 rounded-xl p-1 h-48 w-full overflow-hidden">
-          <div class="w-full h-full relative">
+        <div class="relative bg-slate-950 border border-slate-800 rounded-xl p-1 h-48 w-full overflow-x-auto overflow-y-hidden">
+          <div class="h-full relative" :style="'width:' + getChartWidthPx() + 'px; min-width:100%;'">
             <div class="w-full h-full" x-html="renderChartSvg()"></div>
 
             <!-- interactive hover dots, positioned as % over the chart -->
@@ -314,12 +314,12 @@
                 @mouseleave="hoveredPoint = null"
               ></div>
             </template>
+          </div>
 
-            <div x-show="hoveredPoint" class="absolute top-2 right-2 bg-slate-900/95 border border-slate-700 px-3 py-1.5 rounded-xl shadow-2xl text-xs space-y-0.5 backdrop-blur-md z-30 pointer-events-none">
-              <p class="font-bold" :class="hoveredPoint?.status === 'upcoming' ? 'text-slate-400' : 'text-emerald-400'" x-text="hoveredPoint?.source + ' (' + hoveredPoint?.amount + ')'"></p>
-              <p class="text-slate-200">Vault Balance: <span class="font-black text-white" x-text="'$' + hoveredPoint?.balance"></span></p>
-              <p class="text-[10px] text-slate-400" x-text="'Date: ' + hoveredPoint?.date + ' | Status: ' + hoveredPoint?.status"></p>
-            </div>
+          <div x-show="hoveredPoint" class="absolute top-2 right-2 bg-slate-900/95 border border-slate-700 px-3 py-1.5 rounded-xl shadow-2xl text-xs space-y-0.5 backdrop-blur-md z-30 pointer-events-none">
+            <p class="font-bold" :class="hoveredPoint?.status === 'upcoming' ? 'text-slate-400' : 'text-emerald-400'" x-text="hoveredPoint?.source + ' (' + hoveredPoint?.amount + ')'"></p>
+            <p class="text-slate-200">Vault Balance: <span class="font-black text-white" x-text="'$' + hoveredPoint?.balance"></span></p>
+            <p class="text-[10px] text-slate-400" x-text="'Date: ' + hoveredPoint?.date + ' | Status: ' + hoveredPoint?.status"></p>
           </div>
         </div>
       </div>
@@ -1395,6 +1395,14 @@
           });
         },
 
+        getChartWidthPx() {
+          // Fixed 800x220 viewBox always maps proportionally to the wrapper's actual
+          // rendered width, so widening the wrapper for many points spaces them out
+          // without touching any of the coordinate math below.
+          const n = this.getCalculatedGraphData().length;
+          return Math.max(800, n * 70 + 150);
+        },
+
         getYScales() {
           const data = this.getCalculatedGraphData();
           const balances = data.map(d => d.balance);
@@ -1461,9 +1469,16 @@
         getTodayXPosition() {
           const points = this.getGraphPoints();
           if (points.length === 0) return null;
+          const width = 800, gap = 20;
           const todayIdx = points.findIndex(p => p.data.date >= this.todayStr);
-          if (todayIdx === -1) return points[points.length - 1].x;
-          if (todayIdx === 0) return points[0].x;
+          if (todayIdx === -1) {
+            // every transaction is in the past — place the marker after the last point, not on top of it
+            return Math.min(points[points.length - 1].x + gap, width - 4);
+          }
+          if (todayIdx === 0) {
+            // every transaction is today or later — place the marker before the first point
+            return Math.max(points[0].x - gap, 4);
+          }
           return (points[todayIdx - 1].x + points[todayIdx].x) / 2;
         },
 
