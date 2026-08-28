@@ -15,6 +15,11 @@
     .draggable-item { cursor: grab; }
     .draggable-item:active { cursor: grabbing; }
     .drop-zone-active { background-color: rgba(16, 185, 129, 0.06); }
+    /* Below the sm: breakpoint, the mobile bottom action bar occupies this space —
+       lift the toast stack above it so notifications aren't hidden behind it. */
+    @media (max-width: 639px) {
+      .toast-stack { bottom: max(1rem, calc(env(safe-area-inset-bottom) + 4.25rem)) !important; }
+    }
 
     /* Neutral chrome — true dark grey in dark mode, true white in light mode.
        No club color is mixed into these: a prior version tinted the dark grey
@@ -246,7 +251,7 @@
 
   <!-- TOP HEADER -->
   <header x-show="user && activeClubId" class="border-b border-[color-mix(in_srgb,var(--cc-border)_80%,transparent)] bg-[color-mix(in_srgb,var(--cc-surface)_80%,transparent)] backdrop-blur-md px-6 py-2.5 flex-none sticky top-0 z-40">
-    <div class="w-full flex items-center justify-between flex-wrap gap-x-4 gap-y-2">
+    <div class="w-full flex items-center justify-between gap-2 sm:gap-4">
 
       <!-- LEFT: club identity — click to open club settings (admin only) -->
       <div class="flex items-center gap-3 min-w-0">
@@ -276,13 +281,15 @@
       </div>
 
       <!-- RIGHT: role/pending badges, activity, account avatar menu -->
-      <div class="flex items-center gap-2 flex-none ml-auto">
+      <div class="flex items-center gap-1.5 sm:gap-2 flex-none">
         <span class="text-[9px] font-bold px-2 py-0.5 rounded border cursor-help hidden sm:inline"
               :class="myRole() === 'admin' ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : (myRole() === 'officer' ? 'text-blue-400 border-blue-500/30 bg-blue-500/10' : 'text-[var(--cc-text-muted)] border-[var(--cc-border)] bg-[var(--cc-chip)]/50')"
               :title="myRole() === 'admin' ? 'Admin: full control — settings, dues, members, roles' : (myRole() === 'officer' ? 'Officer: can add/edit transactions, roster, and approve join requests' : 'Viewer: read-only access')"
               x-text="myRole()"></span>
-        <span x-show="Object.keys(clubJoinRequests).length > 0 && can('officer')" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 animate-pulse" x-text="Object.keys(clubJoinRequests).length + ' pending'"></span>
-        <button @click="showActivityLog = true" class="text-[10px] font-bold text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] px-2.5 py-1.5 rounded-lg border border-[var(--cc-border)] hover:border-[var(--cc-border)] transition" title="View activity log">📜 Activity</button>
+        <span x-show="Object.keys(clubJoinRequests).length > 0 && can('officer')" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 animate-pulse whitespace-nowrap">
+          <span class="sm:hidden" x-text="Object.keys(clubJoinRequests).length"></span><span class="hidden sm:inline" x-text="Object.keys(clubJoinRequests).length + ' pending'"></span>
+        </span>
+        <button @click="showActivityLog = true" class="text-[10px] font-bold text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] px-2 sm:px-2.5 py-1.5 rounded-lg border border-[var(--cc-border)] hover:border-[var(--cc-border)] transition" title="View activity log">📜<span class="hidden sm:inline"> Activity</span></button>
 
         <div class="relative" @click.outside="showAccountMenu = false">
           <button @click="showAccountMenu = !showAccountMenu" class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black text-white border-2 transition" :class="avatarColor(user?.name || user?.email) + ' ' + (showAccountMenu ? 'border-slate-400' : 'border-[var(--cc-border)] hover:border-slate-500')" :title="user?.name || user?.email" x-text="initials(user?.name || user?.email)"></button>
@@ -336,7 +343,7 @@
   </header>
 
   <!-- MAIN LAYOUT -->
-  <main x-show="user && activeClubId" class="relative flex-1 min-h-0 w-full p-4 grid grid-rows-[auto_auto_minmax(380px,1fr)] gap-4 max-w-[1600px] mx-auto overflow-y-auto">
+  <main x-show="user && activeClubId" class="relative flex-1 min-h-0 w-full p-4 pb-20 sm:pb-4 grid grid-rows-[auto_auto_minmax(380px,1fr)] gap-4 max-w-[1600px] mx-auto overflow-y-auto">
 
     <!-- CLUB LOADING OVERLAY -->
     <div x-show="!clubDataLoaded" x-transition:leave="transition ease-in duration-300" x-transition:leave-end="opacity-0" class="absolute inset-0 bg-[var(--cc-bg)] z-30 flex items-center justify-center">
@@ -391,7 +398,7 @@
           </div>
         </div>
 
-        <div class="bg-[color-mix(in_srgb,var(--cc-surface)_60%,transparent)] border border-[var(--cc-border)] rounded-xl p-2.5 shadow-lg flex items-center justify-between flex-wrap gap-y-2">
+        <div class="hidden sm:flex bg-[color-mix(in_srgb,var(--cc-surface)_60%,transparent)] border border-[var(--cc-border)] rounded-xl p-2.5 shadow-lg items-center justify-between flex-wrap gap-y-2">
           <span class="text-xs font-semibold text-[var(--cc-text-muted)]">Quick Actions</span>
           <div class="flex gap-2 flex-wrap justify-end">
             <button x-show="can('officer')" @click="openTxForm()" class="bg-[var(--cc-primary)] hover:brightness-110 text-white text-xs font-bold px-3 py-1 rounded-lg transition shadow-md">
@@ -984,8 +991,30 @@
     </div>
   </div>
 
+  <!-- MOBILE BOTTOM ACTION BAR — on narrow screens, the primary actions live in a
+       persistent bar (like a bank app's tab bar) instead of inline in the stat
+       card column, so they're always reachable without scrolling. -->
+  <div x-show="user && activeClubId" x-cloak class="sm:hidden fixed bottom-0 inset-x-0 bg-[var(--cc-surface)] border-t border-[var(--cc-border)] flex items-stretch z-30" style="padding-bottom: env(safe-area-inset-bottom);">
+    <button x-show="can('officer')" @click="openTxForm()" class="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 active:bg-[var(--cc-chip)] transition">
+      <span class="text-lg leading-none" style="color: var(--cc-primary)">➕</span>
+      <span class="text-[9px] font-semibold text-[var(--cc-text-muted)]">Transaction</span>
+    </button>
+    <button x-show="can('officer')" @click="showMemberForm = !showMemberForm" class="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 active:bg-[var(--cc-chip)] transition">
+      <span class="text-lg leading-none" style="color: var(--cc-accent)">👤</span>
+      <span class="text-[9px] font-semibold text-[var(--cc-text-muted)]">Member</span>
+    </button>
+    <button @click="showBreakdown = true" class="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 active:bg-[var(--cc-chip)] transition">
+      <span class="text-lg leading-none">📊</span>
+      <span class="text-[9px] font-semibold text-[var(--cc-text-muted)]">Breakdown</span>
+    </button>
+    <button @click="exportCsv()" class="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 active:bg-[var(--cc-chip)] transition">
+      <span class="text-lg leading-none">⬇</span>
+      <span class="text-[9px] font-semibold text-[var(--cc-text-muted)]">Export</span>
+    </button>
+  </div>
+
   <!-- TOAST NOTIFICATIONS -->
-  <div class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 items-end pointer-events-none">
+  <div class="toast-stack fixed bottom-4 right-4 z-[100] flex flex-col gap-2 items-end pointer-events-none">
     <template x-for="t in toasts" :key="t.id">
       <div x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2"
            x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150"
