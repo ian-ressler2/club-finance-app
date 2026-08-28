@@ -449,7 +449,10 @@
                             <span x-show="item.recurringGroup" class="text-[8px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/30 flex-none">↻ Recurring</span>
                             <span x-show="isUpcoming(item.date)" class="text-[8px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700 flex-none">Scheduled</span>
                           </div>
-                          <p class="text-[9px] text-slate-500 truncate" x-show="item.notes" x-text="item.notes"></p>
+                          <div class="flex items-center gap-1.5">
+                            <span class="text-[9px] text-slate-500 font-mono" x-text="formatDate(item.date)"></span>
+                            <p class="text-[9px] text-slate-500 truncate" x-show="item.notes" x-text="item.notes"></p>
+                          </div>
                         </div>
                         <div class="flex items-center gap-2 flex-none">
                           <span class="text-xs font-bold font-mono" :class="isUpcoming(item.date) ? 'text-slate-400' : 'text-emerald-400'" x-text="'+$' + Number(item.amount).toFixed(2)"></span>
@@ -483,7 +486,10 @@
                             <span x-show="item.category && item.category !== 'Other'" class="text-[8px] px-1.5 py-0.5 rounded border flex-none" :class="categoryClass(item.category)" x-text="item.category"></span>
                             <span class="text-xs font-bold text-white truncate" x-text="item.source"></span>
                           </div>
-                          <p class="text-[9px] text-slate-500 truncate" x-show="item.notes" x-text="item.notes"></p>
+                          <div class="flex items-center gap-1.5 justify-end">
+                            <p class="text-[9px] text-slate-500 truncate" x-show="item.notes" x-text="item.notes"></p>
+                            <span class="text-[9px] text-slate-500 font-mono" x-text="formatDate(item.date)"></span>
+                          </div>
                         </div>
                       </div>
                     </template>
@@ -1387,28 +1393,64 @@
           return sign + Math.round(abs).toLocaleString();
         },
 
+        // Fixed rolling window: 14 days back through today through 7 days ahead = 22 days.
+        // "Today" always sits at index 14, i.e. 14/21 ≈ two-thirds along the axis.
+        GRAPH_DAYS_BACK: 14,
+        GRAPH_DAYS_FORWARD: 7,
+
+        getGraphWindowDays() {
+          const days = [];
+          const start = new Date(this.todayStr + 'T00:00:00');
+          start.setDate(start.getDate() - this.GRAPH_DAYS_BACK);
+          const total = this.GRAPH_DAYS_BACK + this.GRAPH_DAYS_FORWARD + 1;
+          for (let i = 0; i < total; i++) {
+            const d = new Date(start);
+            d.setDate(d.getDate() + i);
+            days.push(d.toISOString().split('T')[0]);
+          }
+          return days;
+        },
+
+        getTodayDayIndex() {
+          return this.GRAPH_DAYS_BACK;
+        },
+
+        // One entry per calendar day in the window (even days with zero transactions),
+        // carrying the running balance as of the end of that day.
         getCalculatedGraphData() {
-          const sorted = [...this.transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+          const days = this.getGraphWindowDays();
+          const windowStart = days[0];
+
           let running = Number(this.startingBalance);
-          return sorted.map((tx) => {
-            running += tx.type === 'deposit' ? Number(tx.amount) : -Number(tx.amount);
+          this.transactions
+            .filter(t => t.date < windowStart)
+            .forEach(t => { running += t.type === 'deposit' ? Number(t.amount) : -Number(t.amount); });
+
+          const byDate = {};
+          this.transactions.forEach(t => {
+            if (!byDate[t.date]) byDate[t.date] = [];
+            byDate[t.date].push(t);
+          });
+
+          return days.map(date => {
+            const dayTxs = (byDate[date] || []).slice().sort((a, b) => (a.id > b.id ? 1 : -1));
+            dayTxs.forEach(t => { running += t.type === 'deposit' ? Number(t.amount) : -Number(t.amount); });
             return {
-              date: tx.date,
-              dateShort: this.formatDate(tx.date).split('/').slice(0,2).join('/'),
-              source: tx.source,
-              status: this.isUpcoming(tx.date) ? 'upcoming' : 'cleared',
-              amount: tx.type === 'deposit' ? `+$${tx.amount}` : `-$${tx.amount}`,
-              balance: running
+              date,
+              dateShort: this.formatDate(date).split('/').slice(0, 2).join('/'),
+              status: this.isUpcoming(date) ? 'upcoming' : 'cleared',
+              balance: running,
+              transactions: dayTxs
             };
           });
         },
 
         getChartWidthPx() {
-          // Fixed 800x220 viewBox always maps proportionally to the wrapper's actual
-          // rendered width, so widening the wrapper for many points spaces them out
-          // without touching any of the coordinate math below.
-          const n = this.getCalculatedGraphData().length;
-          return Math.max(800, n * 70 + 150);
+          // Fixed 22-day window, so the chart is a constant comfortable width — no
+          // longer tied to transaction count. 800x220 viewBox maps proportionally to
+          // the wrapper's actual rendered width via preserveAspectRatio="none".
+          const days = this.GRAPH_DAYS_BACK + this.GRAPH_DAYS_FORWARD + 1;
+          return Math.max(900, days * 45 + 150);
         },
 
         getYScales() {
@@ -1434,92 +1476,96 @@
         getXScales() {
           const width = 800, paddingLeft = 85, paddingRight = 55;
           const usableWidth = width - paddingLeft - paddingRight;
-
-          const data = this.getCalculatedGraphData();
-          if (data.length > 0) {
-            return data.map((d, idx) => {
-              const x = paddingLeft + ((idx + 1) / data.length) * usableWidth;
-              return { x, dateStr: d.dateShort, date: d.date };
-            });
-          }
-
-          const dates = [];
-          const now = new Date();
-          for (let i = 0; i < 4; i++) {
-            const d = new Date(now);
-            d.setDate(d.getDate() + (i * 7));
-            const x = paddingLeft + (i / 3) * usableWidth;
-            const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
-            dates.push({ x, dateStr, date: d.toISOString().split('T')[0] });
-          }
-          return dates;
+          const days = this.getGraphWindowDays();
+          return days.map((date, idx) => ({
+            x: paddingLeft + (idx / (days.length - 1)) * usableWidth,
+            dateStr: this.formatDate(date).split('/').slice(0, 2).join('/'),
+            date
+          }));
         },
 
+        // One hoverable dot per transaction (positioned at its day's x-coordinate),
+        // even when several transactions land on the same day.
         getGraphPoints() {
-          const data = this.getCalculatedGraphData();
-          if (data.length === 0) return [];
+          const dailyData = this.getCalculatedGraphData();
+          if (dailyData.length === 0) return [];
           const width = 800, height = 220, paddingLeft = 85, paddingRight = 55, paddingBottom = 45, paddingTop = 25;
-          const balances = data.map(d => d.balance);
+          const usableWidth = width - paddingLeft - paddingRight;
+          const usableHeight = height - paddingBottom - paddingTop;
+          const balances = dailyData.map(d => d.balance);
           const base = Number(this.startingBalance) || 0;
           const minBal = Math.min(...balances, base, 0);
           const maxBal = Math.max(...balances, base, 100);
           const balRange = maxBal - minBal || 1;
-          const usableHeight = height - paddingBottom - paddingTop;
-          const usableWidth = width - paddingLeft - paddingRight;
+          const n = dailyData.length;
 
-          return data.map((d, idx) => {
-            const x = paddingLeft + ((idx + 1) / data.length) * usableWidth;
-            const y = height - paddingBottom - ((d.balance - minBal) / balRange) * usableHeight;
-            return { x, y, data: d };
+          const points = [];
+          dailyData.forEach((day, idx) => {
+            if (day.transactions.length === 0) return;
+            const x = paddingLeft + (idx / (n - 1)) * usableWidth;
+            const dayNet = day.transactions.reduce((sum, t) => sum + (t.type === 'deposit' ? Number(t.amount) : -Number(t.amount)), 0);
+            let runningWithinDay = day.balance - dayNet;
+            day.transactions.forEach(t => {
+              runningWithinDay += t.type === 'deposit' ? Number(t.amount) : -Number(t.amount);
+              const y = height - paddingBottom - ((runningWithinDay - minBal) / balRange) * usableHeight;
+              points.push({
+                x, y,
+                data: {
+                  date: day.date,
+                  source: t.source,
+                  status: day.status,
+                  amount: t.type === 'deposit' ? `+$${t.amount}` : `-$${t.amount}`,
+                  balance: runningWithinDay
+                }
+              });
+            });
           });
+          return points;
         },
 
         getTodayXPosition() {
-          const points = this.getGraphPoints();
-          if (points.length === 0) return null;
-          const width = 800, gap = 30;
-          const todayIdx = points.findIndex(p => p.data.date >= this.todayStr);
-          if (todayIdx === -1) {
-            // every transaction is in the past — place the marker after the last point, not on top of it
-            return Math.min(points[points.length - 1].x + gap, width - 15);
-          }
-          if (todayIdx === 0) {
-            // every transaction is today or later — place the marker before the first point
-            return Math.max(points[0].x - gap, 15);
-          }
-          return (points[todayIdx - 1].x + points[todayIdx].x) / 2;
+          const width = 800, paddingLeft = 85, paddingRight = 55;
+          const usableWidth = width - paddingLeft - paddingRight;
+          const days = this.getGraphWindowDays();
+          return paddingLeft + (this.getTodayDayIndex() / (days.length - 1)) * usableWidth;
         },
 
+        // filterStatus: 'cleared' (through today), 'upcoming' (today onward, for
+        // visual continuity with the cleared line), or 'all' (the full 22-day path).
         generateGraphPath(filterStatus) {
-          const points = this.getGraphPoints();
-          if (points.length === 0) return "";
-          const height = 220, paddingLeft = 85, paddingBottom = 45;
-          const data = this.getCalculatedGraphData();
-          const balances = data.map(d => d.balance);
+          const dailyData = this.getCalculatedGraphData();
+          if (dailyData.length === 0) return "";
+          const width = 800, height = 220, paddingLeft = 85, paddingRight = 55, paddingBottom = 45, paddingTop = 25;
+          const usableWidth = width - paddingLeft - paddingRight;
+          const usableHeight = height - paddingBottom - paddingTop;
+          const balances = dailyData.map(d => d.balance);
           const base = Number(this.startingBalance) || 0;
           const minBal = Math.min(...balances, base, 0);
           const maxBal = Math.max(...balances, base, 100);
           const balRange = maxBal - minBal || 1;
-          const usableHeight = height - paddingBottom - 25;
+          const n = dailyData.length;
 
-          const startY = height - paddingBottom - ((base - minBal) / balRange) * usableHeight;
+          const coords = dailyData.map((d, idx) => ({
+            x: paddingLeft + (idx / (n - 1)) * usableWidth,
+            y: height - paddingBottom - ((d.balance - minBal) / balRange) * usableHeight
+          }));
 
-          let path = `M ${paddingLeft} ${startY}`;
-          points.forEach(p => {
-            if (filterStatus === 'cleared' && p.data.status === 'cleared') {
-              path += ` L ${p.x} ${p.y}`;
-            } else if (filterStatus === 'upcoming') {
-              path += ` L ${p.x} ${p.y}`;
-            }
-          });
+          const todayIdx = this.getTodayDayIndex();
+          let coordsToUse;
+          if (filterStatus === 'cleared') coordsToUse = coords.slice(0, todayIdx + 1);
+          else if (filterStatus === 'upcoming') coordsToUse = coords.slice(todayIdx);
+          else coordsToUse = coords;
+
+          if (coordsToUse.length === 0) return "";
+          let path = `M ${coordsToUse[0].x} ${coordsToUse[0].y}`;
+          coordsToUse.slice(1).forEach(c => { path += ` L ${c.x} ${c.y}`; });
           return path;
         },
 
         renderChartSvg() {
           const yTicks = this.getYScales();
           const xTicks = this.getXScales();
-          const hasData = this.transactions.length > 0;
-          const todayX = hasData ? this.getTodayXPosition() : null;
+          const todayX = this.getTodayXPosition();
 
           let svg = `<svg viewBox="0 0 800 220" preserveAspectRatio="none" class="w-full h-full overflow-visible">`;
           svg += `<defs><linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
@@ -1541,31 +1587,25 @@
             svg += `<text x="${t.x}" y="196" fill="#cbd5e1" font-size="10" font-weight="700" text-anchor="middle">${t.dateStr}</text>`;
           });
 
-          if (hasData) {
-            svg += `<path d="${this.generateGraphAreaPath()}" fill="url(#chartGradient)" />`;
-            svg += `<path d="${this.generateGraphPath('cleared')}" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />`;
-            svg += `<path d="${this.generateGraphPath('upcoming')}" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round" />`;
-          }
+          svg += `<path d="${this.generateGraphAreaPath()}" fill="url(#chartGradient)" />`;
+          svg += `<path d="${this.generateGraphPath('cleared')}" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />`;
+          svg += `<path d="${this.generateGraphPath('upcoming')}" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round" />`;
 
-          if (todayX) {
-            // Keep the label's text-anchor away from "middle" near the edges so it
-            // never extends past the viewBox (the wrapper now clips for scrolling).
-            const labelAnchor = todayX > 760 ? 'end' : (todayX < 40 ? 'start' : 'middle');
-            svg += `<line x1="${todayX}" y1="20" x2="${todayX}" y2="175" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="4 3" />`;
-            svg += `<text x="${todayX}" y="15" fill="#22d3ee" font-size="8" font-weight="900" text-anchor="${labelAnchor}">TODAY</text>`;
-          }
+          // Keep the label's text-anchor away from "middle" near the edges so it
+          // never extends past the viewBox (the wrapper clips for scrolling).
+          const labelAnchor = todayX > 760 ? 'end' : (todayX < 40 ? 'start' : 'middle');
+          svg += `<line x1="${todayX}" y1="20" x2="${todayX}" y2="175" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="4 3" />`;
+          svg += `<text x="${todayX}" y="15" fill="#22d3ee" font-size="8" font-weight="900" text-anchor="${labelAnchor}">TODAY</text>`;
 
           svg += `</svg>`;
           return svg;
         },
 
         generateGraphAreaPath() {
-          const linePath = this.generateGraphPath('upcoming');
+          const linePath = this.generateGraphPath('all');
           if (!linePath) return "";
-          const points = this.getGraphPoints();
-          const lastPoint = points[points.length - 1];
-          const paddingLeft = 85, paddingBottom = 45, height = 220;
-          return `${linePath} L ${lastPoint.x} ${height - paddingBottom} L ${paddingLeft} ${height - paddingBottom} Z`;
+          const width = 800, paddingLeft = 85, paddingRight = 55, paddingBottom = 45, height = 220;
+          return `${linePath} L ${width - paddingRight} ${height - paddingBottom} L ${paddingLeft} ${height - paddingBottom} Z`;
         },
 
         addTransaction() {
