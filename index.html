@@ -1379,6 +1379,14 @@
         },
 
         // ---------- GRAPH ----------
+        formatCompactCurrency(val) {
+          const sign = val < 0 ? '-' : '';
+          const abs = Math.abs(val);
+          if (abs >= 10000) return sign + Math.round(abs / 1000) + 'k';
+          if (abs >= 1000) return sign + (abs / 1000).toFixed(1) + 'k';
+          return sign + Math.round(abs).toLocaleString();
+        },
+
         getCalculatedGraphData() {
           const sorted = [...this.transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
           let running = Number(this.startingBalance);
@@ -1542,7 +1550,7 @@
           if (todayX) {
             // Keep the label's text-anchor away from "middle" near the edges so it
             // never extends past the viewBox (the wrapper now clips for scrolling).
-            const labelAnchor = todayX > 750 ? 'end' : (todayX < 50 ? 'start' : 'middle');
+            const labelAnchor = todayX > 760 ? 'end' : (todayX < 40 ? 'start' : 'middle');
             svg += `<line x1="${todayX}" y1="20" x2="${todayX}" y2="175" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="4 3" />`;
             svg += `<text x="${todayX}" y="15" fill="#22d3ee" font-size="8" font-weight="900" text-anchor="${labelAnchor}">TODAY</text>`;
           }
