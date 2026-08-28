@@ -15,9 +15,43 @@
     .draggable-item { cursor: grab; }
     .draggable-item:active { cursor: grabbing; }
     .drop-zone-active { background-color: rgba(16, 185, 129, 0.06); }
+
+    /* Neutral chrome — true dark grey in dark mode, true white in light mode.
+       No club color is mixed into these: a prior version tinted the dark grey
+       with the primary color, but the base grey had a blue cast, so red club
+       colors mixed into it and came out looking purple. Chrome now stays a
+       plain, colorless neutral; the club's primary/accent/highlight colors
+       show up in text, borders, and buttons instead — matching how iastate.edu
+       actually uses Cardinal/Gold (as accents on a white page, not as a tint). */
+    :root {
+      --cc-neutral-bg: #030712;
+      --cc-neutral-surface: #111318;
+      --cc-neutral-chip: #1b1e25;
+      --cc-neutral-border: #262a33;
+      --cc-text: #ffffff;
+      --cc-text-muted: #9aa1ad;
+    }
+    :root[data-theme="light"] {
+      --cc-neutral-bg: #ffffff;
+      --cc-neutral-surface: #f4f4f5;
+      --cc-neutral-chip: #e7e7ea;
+      --cc-neutral-border: #e0e1e6;
+      --cc-text: #16171a;
+      --cc-text-muted: #5b5e69;
+    }
+    body {
+      --cc-bg: var(--cc-neutral-bg);
+      --cc-surface: var(--cc-neutral-surface);
+      --cc-chip: var(--cc-neutral-chip);
+      /* Borders keep a light tint of the primary color — a colored edge/accent
+         (like ISU's gold rule lines) reads as branding without recoloring the
+         whole surface underneath it. */
+      --cc-border: color-mix(in srgb, var(--cc-primary) 25%, var(--cc-neutral-border));
+    }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 h-screen w-screen flex flex-col font-sans antialiased overflow-y-auto" x-data="financeApp()" x-cloak>
+<body class="bg-[var(--cc-bg)] text-slate-100 h-screen w-screen flex flex-col font-sans antialiased overflow-y-auto" x-data="financeApp()" x-cloak
+      :style="'--cc-primary:' + (clubTheme.primary || '#059669') + '; --cc-accent:' + (clubTheme.accent || '#2563eb') + '; --cc-highlight:' + (clubTheme.highlight || '#f59e0b') + ';'">
 
   <!-- AUTH GATE (person-level account, no club tied to it) -->
   <div x-show="!user" x-cloak class="flex-1 w-full flex items-center justify-center p-4">
@@ -34,52 +68,52 @@
           <circle cx="50" cy="30" r="17" fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round" stroke-dasharray="80 26.8" transform="rotate(45 50 30)"/>
           <circle cx="50" cy="70" r="17" fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round" stroke-dasharray="80 26.8" transform="rotate(225 50 70)"/>
         </svg>
-        <h1 class="text-xl font-extrabold text-white">ClubCash</h1>
-        <p class="text-xs text-slate-400 mt-1">Track dues, deposits, and withdrawals for your college club.</p>
+        <h1 class="text-xl font-extrabold text-[var(--cc-text)]">ClubCash</h1>
+        <p class="text-xs text-[var(--cc-text-muted)] mt-1">Track dues, deposits, and withdrawals for your college club.</p>
       </div>
 
-      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-2xl">
-        <div class="flex gap-1 bg-slate-950 border border-slate-800 rounded-xl p-1 mb-4">
-          <button type="button" @click="authMode = 'login'; authError = ''" class="flex-1 text-xs font-bold py-1.5 rounded-lg transition" :class="authMode === 'login' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-slate-200'">Log In</button>
-          <button type="button" @click="authMode = 'signup'; authError = ''" class="flex-1 text-xs font-bold py-1.5 rounded-lg transition" :class="authMode === 'signup' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-slate-200'">Sign Up</button>
+      <div class="bg-[color-mix(in_srgb,var(--cc-surface)_60%,transparent)] border border-[var(--cc-border)] rounded-2xl p-5 shadow-2xl">
+        <div class="flex gap-1 bg-[var(--cc-bg)] border border-[var(--cc-border)] rounded-xl p-1 mb-4">
+          <button type="button" @click="authMode = 'login'; authError = ''" class="flex-1 text-xs font-bold py-1.5 rounded-lg transition" :class="authMode === 'login' ? 'bg-emerald-600 text-white' : 'text-[var(--cc-text-muted)] hover:text-[var(--cc-text-muted)]'">Log In</button>
+          <button type="button" @click="authMode = 'signup'; authError = ''" class="flex-1 text-xs font-bold py-1.5 rounded-lg transition" :class="authMode === 'signup' ? 'bg-emerald-600 text-white' : 'text-[var(--cc-text-muted)] hover:text-[var(--cc-text-muted)]'">Sign Up</button>
         </div>
 
         <!-- LOGIN FORM -->
         <form x-show="authMode === 'login'" @submit.prevent="login()" class="space-y-2.5">
           <div>
-            <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Email</label>
-            <input type="email" x-model="authForm.email" required autocomplete="username" class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="you@school.edu">
+            <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Email</label>
+            <input type="email" x-model="authForm.email" required autocomplete="username" class="w-full bg-[var(--cc-bg)] border border-[var(--cc-border)] text-sm text-[var(--cc-text)] rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="you@school.edu">
           </div>
           <div>
-            <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Password</label>
-            <input type="password" x-model="authForm.password" required autocomplete="current-password" class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="••••••••">
+            <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Password</label>
+            <input type="password" x-model="authForm.password" required autocomplete="current-password" class="w-full bg-[var(--cc-bg)] border border-[var(--cc-border)] text-sm text-[var(--cc-text)] rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="••••••••">
           </div>
           <p x-show="authError" class="text-[11px] text-rose-400" x-text="authError"></p>
           <p x-show="authNotice" class="text-[11px] text-emerald-400" x-text="authNotice"></p>
           <button type="submit" :disabled="authLoading" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-bold py-2 rounded-lg transition mt-1">
             <span x-text="authLoading ? 'Signing in…' : 'Log In'"></span>
           </button>
-          <button type="button" @click="forgotPassword()" class="w-full text-[10px] text-slate-500 hover:text-slate-300 hover:underline text-center pt-1">Forgot password?</button>
+          <button type="button" @click="forgotPassword()" class="w-full text-[10px] text-[var(--cc-text-muted)] hover:text-[var(--cc-text-muted)] hover:underline text-center pt-1">Forgot password?</button>
         </form>
 
         <!-- SIGN UP FORM -->
         <form x-show="authMode === 'signup'" @submit.prevent="signup()" class="space-y-2.5">
-          <p class="text-[11px] text-slate-400 -mt-1 mb-1">Create your personal account. You'll create or join clubs after signing in — you can belong to more than one.</p>
+          <p class="text-[11px] text-[var(--cc-text-muted)] -mt-1 mb-1">Create your personal account. You'll create or join clubs after signing in — you can belong to more than one.</p>
           <div>
-            <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Full Name</label>
-            <input type="text" x-model="authForm.name" required autocomplete="name" class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="Jordan Lee">
+            <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Full Name</label>
+            <input type="text" x-model="authForm.name" required autocomplete="name" class="w-full bg-[var(--cc-bg)] border border-[var(--cc-border)] text-sm text-[var(--cc-text)] rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="Jordan Lee">
           </div>
           <div>
-            <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Email</label>
-            <input type="email" x-model="authForm.email" required autocomplete="username" class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="you@school.edu">
+            <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Email</label>
+            <input type="email" x-model="authForm.email" required autocomplete="username" class="w-full bg-[var(--cc-bg)] border border-[var(--cc-border)] text-sm text-[var(--cc-text)] rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="you@school.edu">
           </div>
           <div>
-            <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Password</label>
-            <input type="password" x-model="authForm.password" required minlength="6" autocomplete="new-password" class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="At least 6 characters">
+            <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Password</label>
+            <input type="password" x-model="authForm.password" required minlength="6" autocomplete="new-password" class="w-full bg-[var(--cc-bg)] border border-[var(--cc-border)] text-sm text-[var(--cc-text)] rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="At least 6 characters">
           </div>
           <div>
-            <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Confirm Password</label>
-            <input type="password" x-model="authForm.confirmPassword" required autocomplete="new-password" class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="••••••••">
+            <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Confirm Password</label>
+            <input type="password" x-model="authForm.confirmPassword" required autocomplete="new-password" class="w-full bg-[var(--cc-bg)] border border-[var(--cc-border)] text-sm text-[var(--cc-text)] rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="••••••••">
           </div>
           <p x-show="authError" class="text-[11px] text-rose-400" x-text="authError"></p>
           <button type="submit" :disabled="authLoading" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-bold py-2 rounded-lg transition mt-1">
@@ -97,36 +131,36 @@
         <div class="flex items-center gap-2.5">
           <span class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black text-white flex-none" :class="avatarColor(user?.name || user?.email)" x-text="initials(user?.name || user?.email)"></span>
           <div>
-            <h1 class="text-lg font-extrabold text-white">Your Clubs</h1>
-            <p class="text-xs text-slate-400" x-text="user?.name ? user.name + ' · ' + user.email : user?.email"></p>
+            <h1 class="text-lg font-extrabold text-[var(--cc-text)]">Your Clubs</h1>
+            <p class="text-xs text-[var(--cc-text-muted)]" x-text="user?.name ? user.name + ' · ' + user.email : user?.email"></p>
           </div>
         </div>
-        <button @click="logout()" class="text-[10px] font-bold text-slate-400 hover:text-rose-400 px-2.5 py-1.5 rounded-lg border border-slate-800 hover:border-rose-500/30 transition">Sign Out</button>
+        <button @click="logout()" class="text-[10px] font-bold text-[var(--cc-text-muted)] hover:text-rose-400 px-2.5 py-1.5 rounded-lg border border-[var(--cc-border)] hover:border-rose-500/30 transition">Sign Out</button>
       </div>
 
       <!-- MEMBERSHIPS -->
-      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-2">
+      <div class="bg-[color-mix(in_srgb,var(--cc-surface)_60%,transparent)] border border-[var(--cc-border)] rounded-2xl p-4 space-y-2">
         <template x-if="Object.keys(myClubs).length === 0">
           <p class="text-center py-4 text-slate-600 text-xs italic">You're not in any clubs yet. Create one, or search below to request access.</p>
         </template>
         <template x-for="[clubId, role] in Object.entries(myClubs)" :key="clubId">
-          <button @click="enterClub(clubId)" class="w-full flex items-center justify-between bg-slate-950/70 border border-slate-800 hover:border-emerald-500/40 hover:bg-slate-900 hover:scale-[1.01] hover:shadow-lg p-3 rounded-xl transition text-left">
-            <span class="text-sm font-bold text-white" x-text="clubDirectoryName(clubId)"></span>
+          <button @click="enterClub(clubId)" class="w-full flex items-center justify-between bg-[color-mix(in_srgb,var(--cc-bg)_70%,transparent)] border border-[var(--cc-border)] hover:border-emerald-500/40 hover:bg-[var(--cc-surface)] hover:scale-[1.01] hover:shadow-lg p-3 rounded-xl transition text-left">
+            <span class="text-sm font-bold text-[var(--cc-text)]" x-text="clubDirectoryName(clubId)"></span>
             <span class="text-[9px] font-bold px-2 py-0.5 rounded border"
-                  :class="role === 'admin' ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : (role === 'officer' ? 'text-blue-400 border-blue-500/30 bg-blue-500/10' : 'text-slate-400 border-slate-700 bg-slate-800/50')"
+                  :class="role === 'admin' ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : (role === 'officer' ? 'text-blue-400 border-blue-500/30 bg-blue-500/10' : 'text-[var(--cc-text-muted)] border-[var(--cc-border)] bg-[var(--cc-chip)]/50')"
                   x-text="role"></span>
           </button>
         </template>
 
         <template x-if="Object.keys(pendingRequests).length > 0">
-          <div class="pt-2 mt-2 border-t border-slate-800 space-y-2">
-            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Awaiting Approval</p>
+          <div class="pt-2 mt-2 border-t border-[var(--cc-border)] space-y-2">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-[var(--cc-text-muted)]">Awaiting Approval</p>
             <template x-for="[clubId, name] in Object.entries(pendingRequests)" :key="clubId">
-              <div class="flex items-center justify-between bg-slate-950/40 border border-slate-800/60 p-2.5 rounded-xl">
-                <span class="text-xs text-slate-300" x-text="name"></span>
+              <div class="flex items-center justify-between bg-[color-mix(in_srgb,var(--cc-bg)_40%,transparent)] border border-[color-mix(in_srgb,var(--cc-border)_60%,transparent)] p-2.5 rounded-xl">
+                <span class="text-xs text-[var(--cc-text-muted)]" x-text="name"></span>
                 <div class="flex items-center gap-2">
                   <span class="text-[9px] text-amber-400 font-bold">Pending</span>
-                  <button @click="cancelRequest(clubId)" class="text-[10px] text-slate-500 hover:text-rose-400">Cancel</button>
+                  <button @click="cancelRequest(clubId)" class="text-[10px] text-[var(--cc-text-muted)] hover:text-rose-400">Cancel</button>
                 </div>
               </div>
             </template>
@@ -135,19 +169,27 @@
       </div>
 
       <!-- CREATE A CLUB -->
-      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4">
-        <button @click="showCreateClubForm = !showCreateClubForm" class="w-full flex items-center justify-between text-sm font-bold text-white">
+      <div class="bg-[color-mix(in_srgb,var(--cc-surface)_60%,transparent)] border border-[var(--cc-border)] rounded-2xl p-4">
+        <button @click="showCreateClubForm = !showCreateClubForm" class="w-full flex items-center justify-between text-sm font-bold text-[var(--cc-text)]">
           <span>+ Create a Club</span>
-          <span class="text-slate-500 text-xs" x-text="showCreateClubForm ? '−' : '+'"></span>
+          <span class="text-[var(--cc-text-muted)] text-xs" x-text="showCreateClubForm ? '−' : '+'"></span>
         </button>
         <form x-show="showCreateClubForm" x-transition @submit.prevent="createClub()" class="mt-3 space-y-2.5">
           <div>
-            <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Club Name</label>
-            <input type="text" x-model="newClubForm.name" required class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="My Club">
+            <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Club Name</label>
+            <input type="text" x-model="newClubForm.name" required class="w-full bg-[var(--cc-bg)] border border-[var(--cc-border)] text-sm text-[var(--cc-text)] rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="My Club">
           </div>
           <div>
-            <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Club Contact Email <span class="text-slate-600 normal-case font-normal">(optional, shown to members)</span></label>
-            <input type="email" x-model="newClubForm.contactEmail" class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="myclub@school.edu">
+            <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Club Contact Email <span class="text-slate-600 normal-case font-normal">(optional, shown to members)</span></label>
+            <input type="email" x-model="newClubForm.contactEmail" class="w-full bg-[var(--cc-bg)] border border-[var(--cc-border)] text-sm text-[var(--cc-text)] rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="myclub@school.edu">
+          </div>
+          <div>
+            <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Theme Colors <span class="text-slate-600 normal-case font-normal">(change anytime later in Club Settings)</span></label>
+            <div class="grid grid-cols-3 gap-2 mt-1">
+              <input type="color" x-model="newClubForm.theme.primary" class="w-full h-8 rounded-lg border border-[var(--cc-border)] bg-[var(--cc-bg)] cursor-pointer" title="Primary">
+              <input type="color" x-model="newClubForm.theme.accent" class="w-full h-8 rounded-lg border border-[var(--cc-border)] bg-[var(--cc-bg)] cursor-pointer" title="Accent">
+              <input type="color" x-model="newClubForm.theme.highlight" class="w-full h-8 rounded-lg border border-[var(--cc-border)] bg-[var(--cc-bg)] cursor-pointer" title="Highlight">
+            </div>
           </div>
           <p x-show="clubFormError" class="text-[11px] text-rose-400" x-text="clubFormError"></p>
           <button type="submit" :disabled="creatingClub" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-bold py-2 rounded-lg transition">
@@ -157,15 +199,15 @@
       </div>
 
       <!-- JOIN A CLUB -->
-      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4">
-        <p class="text-sm font-bold text-white mb-2">Join an Existing Club</p>
-        <input type="text" x-model="joinSearch" @input="loadClubDirectory()" @focus="loadClubDirectory()" placeholder="Search club name…" class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500">
+      <div class="bg-[color-mix(in_srgb,var(--cc-surface)_60%,transparent)] border border-[var(--cc-border)] rounded-2xl p-4">
+        <p class="text-sm font-bold text-[var(--cc-text)] mb-2">Join an Existing Club</p>
+        <input type="text" x-model="joinSearch" @input="loadClubDirectory()" @focus="loadClubDirectory()" placeholder="Search club name…" class="w-full bg-[var(--cc-bg)] border border-[var(--cc-border)] text-sm text-[var(--cc-text)] rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500">
         <div class="mt-2 space-y-1.5">
           <template x-for="c in getJoinResults()" :key="c.id">
-            <div class="flex items-center justify-between bg-slate-950/70 border border-slate-800 p-2.5 rounded-xl">
-              <span class="text-xs font-semibold text-slate-200" x-text="c.name"></span>
+            <div class="flex items-center justify-between bg-[color-mix(in_srgb,var(--cc-bg)_70%,transparent)] border border-[var(--cc-border)] p-2.5 rounded-xl">
+              <span class="text-xs font-semibold text-[var(--cc-text-muted)]" x-text="c.name"></span>
               <template x-if="myClubs[c.id]">
-                <span class="text-[9px] text-slate-500 font-bold">Already a member</span>
+                <span class="text-[9px] text-[var(--cc-text-muted)] font-bold">Already a member</span>
               </template>
               <template x-if="!myClubs[c.id] && pendingRequests[c.id]">
                 <span class="text-[9px] text-amber-400 font-bold">Requested</span>
@@ -182,12 +224,14 @@
   </div>
 
   <!-- TOP HEADER -->
-  <header x-show="user && activeClubId" class="border-b border-slate-800/80 bg-slate-900/80 backdrop-blur-md px-6 py-2.5 flex-none sticky top-0 z-40">
-    <div class="w-full flex items-center justify-between gap-4 flex-wrap">
-      <div class="flex items-center gap-3">
-        <button @click="leaveClub()" class="text-slate-500 hover:text-white text-xs font-bold px-1" title="Back to My Clubs" aria-label="Back to My Clubs">←</button>
-        <div>
-          <h1 class="text-lg font-extrabold tracking-tight text-white flex items-center gap-2">
+  <header x-show="user && activeClubId" class="border-b border-[color-mix(in_srgb,var(--cc-border)_80%,transparent)] bg-[color-mix(in_srgb,var(--cc-surface)_80%,transparent)] backdrop-blur-md px-6 py-2.5 flex-none sticky top-0 z-40">
+    <div class="w-full flex items-center justify-between gap-4">
+
+      <!-- LEFT: club identity — click to open club settings (admin only) -->
+      <div class="flex items-center gap-3 min-w-0 flex-none">
+        <button @click="leaveClub()" class="text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] text-xs font-bold px-1 flex-none" title="Back to My Clubs" aria-label="Back to My Clubs">←</button>
+        <div @click="can('admin') && openClubSettings()" :class="can('admin') ? 'cursor-pointer hover:opacity-80' : ''" class="transition min-w-0" :title="can('admin') ? 'Click to edit club settings' : ''">
+          <h1 class="text-lg font-extrabold tracking-tight text-[var(--cc-text)] flex items-center gap-2 min-w-0">
             <svg viewBox="0 0 100 100" class="w-6 h-6 flex-none">
               <defs>
                 <linearGradient id="ccLogoGradSm" x1="0" y1="0" x2="1" y2="1">
@@ -198,49 +242,85 @@
               <circle cx="50" cy="50" r="47" fill="url(#ccLogoGradSm)" stroke="#065f46" stroke-width="3"/>
               <circle cx="50" cy="30" r="17" fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round" stroke-dasharray="80 26.8" transform="rotate(45 50 30)"/>
               <circle cx="50" cy="70" r="17" fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round" stroke-dasharray="80 26.8" transform="rotate(225 50 70)"/>
-            </svg> <span x-text="clubName || 'ClubCash'"></span>
-            <button x-show="can('admin')" @click="openClubSettings()" class="text-slate-500 hover:text-slate-200 text-xs" title="Club settings" aria-label="Club settings">⚙</button>
+            </svg>
+            <span class="truncate" x-text="clubName || 'ClubCash'"></span>
           </h1>
-          <p x-show="clubContactEmail" class="text-[10px] text-slate-500 pl-8" x-text="clubContactEmail"></p>
+          <p x-show="clubContactEmail" class="text-[10px] text-[var(--cc-text-muted)] pl-8 truncate" x-text="clubContactEmail"></p>
         </div>
       </div>
 
-      <div class="flex items-center gap-2 flex-wrap">
-        <div class="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl shadow-inner">
-          <span class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black text-white flex-none" :class="avatarColor(user?.name || user?.email)" :title="user?.email" x-text="initials(user?.name || user?.email)"></span>
-          <template x-if="!editingMyName">
-            <button @click="startEditMyName()" class="text-xs font-semibold text-slate-300 hover:text-white hover:underline decoration-dashed underline-offset-2" title="Click to set/edit your name">
-              <span x-text="user?.name || user?.email"></span>
-              <span x-show="!user?.name" class="text-amber-400 font-bold ml-0.5">· set name</span>
-            </button>
-          </template>
-          <template x-if="editingMyName">
-            <form @submit.prevent="saveMyName()" class="flex items-center gap-1">
-              <input type="text" x-model="myNameInput" autofocus placeholder="Your name" class="bg-slate-950 border border-slate-700 text-xs text-white rounded px-1.5 py-0.5 w-28 focus:outline-none focus:border-emerald-500">
-              <button type="submit" class="text-emerald-400 hover:text-emerald-300 text-xs font-bold">✓</button>
-              <button type="button" @click="editingMyName = false" class="text-slate-500 hover:text-rose-400 text-xs font-bold" aria-label="Cancel">✕</button>
-            </form>
-          </template>
-          <span class="text-[9px] font-bold px-2 py-0.5 rounded border cursor-help"
-                :class="myRole() === 'admin' ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : (myRole() === 'officer' ? 'text-blue-400 border-blue-500/30 bg-blue-500/10' : 'text-slate-400 border-slate-700 bg-slate-800/50')"
-                :title="myRole() === 'admin' ? 'Admin: full control — settings, dues, members, roles' : (myRole() === 'officer' ? 'Officer: can add/edit transactions, roster, and approve join requests' : 'Viewer: read-only access')"
-                x-text="myRole()"></span>
-          <span x-show="Object.keys(clubJoinRequests).length > 0 && can('officer')" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 animate-pulse" x-text="Object.keys(clubJoinRequests).length + ' pending'"></span>
+      <!-- MIDDLE: transient "eyebrow" feedback (e.g. "Transaction saved") -->
+      <div class="flex-1 flex items-center justify-center min-w-0 px-2">
+        <div x-show="headerNotice" x-transition.opacity class="text-[11px] font-semibold text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full truncate max-w-full" x-text="headerNotice?.message"></div>
+      </div>
+
+      <!-- RIGHT: role/pending badges, activity, account avatar menu -->
+      <div class="flex items-center gap-2 flex-none">
+        <span class="text-[9px] font-bold px-2 py-0.5 rounded border cursor-help hidden sm:inline"
+              :class="myRole() === 'admin' ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : (myRole() === 'officer' ? 'text-blue-400 border-blue-500/30 bg-blue-500/10' : 'text-[var(--cc-text-muted)] border-[var(--cc-border)] bg-[var(--cc-chip)]/50')"
+              :title="myRole() === 'admin' ? 'Admin: full control — settings, dues, members, roles' : (myRole() === 'officer' ? 'Officer: can add/edit transactions, roster, and approve join requests' : 'Viewer: read-only access')"
+              x-text="myRole()"></span>
+        <span x-show="Object.keys(clubJoinRequests).length > 0 && can('officer')" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 animate-pulse" x-text="Object.keys(clubJoinRequests).length + ' pending'"></span>
+        <button @click="showActivityLog = true" class="text-[10px] font-bold text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] px-2.5 py-1.5 rounded-lg border border-[var(--cc-border)] hover:border-[var(--cc-border)] transition" title="View activity log">📜 Activity</button>
+
+        <div class="relative" @click.outside="showAccountMenu = false">
+          <button @click="showAccountMenu = !showAccountMenu" class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black text-white border-2 transition" :class="avatarColor(user?.name || user?.email) + ' ' + (showAccountMenu ? 'border-slate-400' : 'border-[var(--cc-border)] hover:border-slate-500')" :title="user?.name || user?.email" x-text="initials(user?.name || user?.email)"></button>
+
+          <div x-show="showAccountMenu" x-transition x-cloak class="absolute right-0 top-full mt-2 w-64 bg-[var(--cc-surface)] border border-[var(--cc-border)] rounded-xl shadow-2xl z-50 p-1.5">
+            <div class="px-2.5 py-2 border-b border-[var(--cc-border)] mb-1">
+              <template x-if="!editingMyName">
+                <div>
+                  <div class="flex items-center justify-between gap-2">
+                    <p class="text-xs font-bold text-[var(--cc-text)] truncate" x-text="user?.name || user?.email"></p>
+                    <button @click="startEditMyName()" class="text-[10px] text-emerald-400 hover:underline flex-none">Edit</button>
+                  </div>
+                  <p class="text-[10px] text-[var(--cc-text-muted)] truncate" x-text="user?.email"></p>
+                </div>
+              </template>
+              <template x-if="editingMyName">
+                <form @submit.prevent="saveMyName()" class="flex items-center gap-1">
+                  <input type="text" x-model="myNameInput" autofocus placeholder="Your name" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-xs text-[var(--cc-text)] rounded px-1.5 py-1 flex-1 min-w-0 focus:outline-none focus:border-emerald-500">
+                  <button type="submit" class="text-emerald-400 hover:text-emerald-300 text-xs font-bold px-1 flex-none">✓</button>
+                  <button type="button" @click="editingMyName = false" class="text-[var(--cc-text-muted)] hover:text-rose-400 text-xs font-bold px-1 flex-none" aria-label="Cancel">✕</button>
+                </form>
+              </template>
+            </div>
+
+            <button @click="openChangeEmail()" class="w-full text-left text-xs text-[var(--cc-text-muted)] hover:bg-[var(--cc-chip)] rounded-lg px-2.5 py-1.5 transition">📧 Change Email</button>
+            <button @click="openChangePassword()" class="w-full text-left text-xs text-[var(--cc-text-muted)] hover:bg-[var(--cc-chip)] rounded-lg px-2.5 py-1.5 transition">🔒 Change Password</button>
+
+            <div class="border-t border-[var(--cc-border)] my-1"></div>
+            <p class="px-2.5 pt-1 pb-1.5 text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Appearance</p>
+            <div class="flex gap-1 px-2.5 pb-1.5">
+              <button @click="colorMode = 'dark'" :class="colorMode === 'dark' ? 'bg-emerald-600 text-white' : 'bg-[var(--cc-chip)] text-[var(--cc-text-muted)] hover:bg-[var(--cc-border)]'" class="flex-1 text-[10px] font-bold py-1 rounded-lg transition">🌙 Dark</button>
+              <button @click="colorMode = 'light'" :class="colorMode === 'light' ? 'bg-emerald-600 text-white' : 'bg-[var(--cc-chip)] text-[var(--cc-text-muted)] hover:bg-[var(--cc-border)]'" class="flex-1 text-[10px] font-bold py-1 rounded-lg transition">☀️ Light</button>
+            </div>
+
+            <p class="px-2.5 pt-1 pb-1.5 text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Timeline View</p>
+            <div class="flex gap-1 px-2.5 pb-1.5">
+              <button @click="timelineMode = 'chronological'" :class="timelineMode === 'chronological' ? 'bg-emerald-600 text-white' : 'bg-[var(--cc-chip)] text-[var(--cc-text-muted)] hover:bg-[var(--cc-border)]'" class="flex-1 text-[10px] font-bold py-1 rounded-lg transition" title="Show every day, even ones with nothing scheduled — lets you drag onto any date">Chronological</button>
+              <button @click="timelineMode = 'stacked'" :class="timelineMode === 'stacked' ? 'bg-emerald-600 text-white' : 'bg-[var(--cc-chip)] text-[var(--cc-text-muted)] hover:bg-[var(--cc-border)]'" class="flex-1 text-[10px] font-bold py-1 rounded-lg transition" title="Collapse empty days for a denser view — click a date to retarget it">Stacked</button>
+            </div>
+
+            <div class="border-t border-[var(--cc-border)] my-1"></div>
+            <button @click="leaveClub()" class="w-full text-left text-xs text-[var(--cc-text-muted)] hover:bg-[var(--cc-chip)] rounded-lg px-2.5 py-1.5 transition">🔀 Switch / Manage Clubs</button>
+            <button @click="showAccountMenu = false; leaveClubMembership()" class="w-full text-left text-xs text-[var(--cc-text-muted)] hover:bg-[var(--cc-chip)] rounded-lg px-2.5 py-1.5 transition">🚪 Leave This Club</button>
+
+            <div class="border-t border-[var(--cc-border)] my-1"></div>
+            <button @click="logout()" class="w-full text-left text-xs text-rose-400 hover:bg-rose-500/10 rounded-lg px-2.5 py-1.5 transition">⏻ Sign Out</button>
+          </div>
         </div>
-        <button @click="showActivityLog = true" class="text-[10px] font-bold text-slate-400 hover:text-white px-2.5 py-1.5 rounded-lg border border-slate-800 hover:border-slate-700 transition" title="View activity log">📜 Activity</button>
-        <button @click="leaveClubMembership()" class="text-[10px] font-bold text-slate-400 hover:text-amber-400 px-2.5 py-1.5 rounded-lg border border-slate-800 hover:border-amber-500/30 transition" title="Leave this club">Leave Club</button>
-        <button @click="logout()" class="text-[10px] font-bold text-slate-400 hover:text-rose-400 px-2.5 py-1.5 rounded-lg border border-slate-800 hover:border-rose-500/30 transition">Sign Out</button>
       </div>
     </div>
   </header>
 
   <!-- MAIN LAYOUT -->
-  <main x-show="user && activeClubId" class="relative flex-1 min-h-0 w-full p-4 grid grid-rows-[auto_auto_auto_auto_minmax(380px,1fr)] gap-4 max-w-[1600px] mx-auto overflow-y-auto">
+  <main x-show="user && activeClubId" class="relative flex-1 min-h-0 w-full p-4 grid grid-rows-[auto_auto_minmax(380px,1fr)] gap-4 max-w-[1600px] mx-auto overflow-y-auto">
 
     <!-- CLUB LOADING OVERLAY -->
-    <div x-show="!clubDataLoaded" x-transition:leave="transition ease-in duration-300" x-transition:leave-end="opacity-0" class="absolute inset-0 bg-slate-950 z-30 flex items-center justify-center">
-      <div class="flex items-center gap-2.5 text-slate-500 text-sm font-semibold">
-        <span class="w-4 h-4 border-2 border-slate-700 border-t-emerald-400 rounded-full animate-spin"></span>
+    <div x-show="!clubDataLoaded" x-transition:leave="transition ease-in duration-300" x-transition:leave-end="opacity-0" class="absolute inset-0 bg-[var(--cc-bg)] z-30 flex items-center justify-center">
+      <div class="flex items-center gap-2.5 text-[var(--cc-text-muted)] text-sm font-semibold">
+        <span class="w-4 h-4 border-2 border-[var(--cc-border)] border-t-emerald-400 rounded-full animate-spin"></span>
         Loading club…
       </div>
     </div>
@@ -257,46 +337,46 @@
       <!-- LEFT: STAT CARDS -->
       <div class="lg:col-span-4 flex flex-col justify-between gap-2.5">
 
-        <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3 shadow-lg">
+        <div class="bg-[color-mix(in_srgb,var(--cc-surface)_60%,transparent)] border border-[var(--cc-border)] rounded-xl p-3 shadow-lg">
           <div class="flex justify-between items-center">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Vault Starting Base</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--cc-text-muted)]">Vault Starting Base</span>
             <button x-show="can('admin')" @click="toggleEditStarting()" class="text-[10px] text-emerald-400 hover:underline">
               <span x-text="editingStarting ? 'Done' : 'Edit'"></span>
             </button>
           </div>
           <template x-if="!editingStarting">
-            <p class="text-xl font-black text-white mt-0.5" x-text="'$' + Number(startingBalance).toFixed(2)"></p>
+            <p class="text-xl font-black text-[var(--cc-text)] mt-0.5" x-text="'$' + Number(startingBalance).toFixed(2)"></p>
           </template>
           <template x-if="editingStarting && can('admin')">
             <div class="flex items-center gap-2 mt-1">
-              <span class="text-slate-400 text-xs font-bold">$</span>
-              <input type="number" step="0.01" x-model.number="startingBalance" @change="syncToFirebase()" class="bg-slate-950 border border-slate-700 text-xs text-white px-2 py-0.5 rounded w-full focus:outline-none focus:border-emerald-500">
+              <span class="text-[var(--cc-text-muted)] text-xs font-bold">$</span>
+              <input type="number" step="0.01" x-model.number="startingBalance" @change="syncToFirebase()" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-xs text-[var(--cc-text)] px-2 py-0.5 rounded w-full focus:outline-none focus:border-emerald-500">
             </div>
           </template>
         </div>
 
         <div class="grid grid-cols-3 gap-2">
-          <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 shadow-lg border-l-2 border-l-emerald-500 hover:bg-slate-900 hover:scale-[1.03] hover:shadow-xl transition cursor-default" title="Vault balance including only cleared (past/today) transactions">
-            <p class="text-[9px] font-bold uppercase text-slate-400">Current Vault</p>
-            <p class="text-base font-black text-white mt-0.5" x-text="'$' + getCurrentBalance().toFixed(2)"></p>
+          <div class="bg-[color-mix(in_srgb,var(--cc-surface)_60%,transparent)] border border-[var(--cc-border)] rounded-xl p-2.5 shadow-lg border-l-2 border-l-emerald-500 hover:bg-[var(--cc-surface)] hover:scale-[1.03] hover:shadow-xl transition cursor-default" title="Vault balance including only cleared (past/today) transactions">
+            <p class="text-[9px] font-bold uppercase text-[var(--cc-text-muted)]">Current Vault</p>
+            <p class="text-base font-black text-[var(--cc-text)] mt-0.5" x-text="'$' + getCurrentBalance().toFixed(2)"></p>
           </div>
-          <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 shadow-lg border-l-2 border-l-blue-500 hover:bg-slate-900 hover:scale-[1.03] hover:shadow-xl transition cursor-default" title="Sum of all cleared deposits">
-            <p class="text-[9px] font-bold uppercase text-slate-400">Total Cleared</p>
-            <p class="text-base font-black text-white mt-0.5" x-text="'$' + getTotalClearedDeposits().toFixed(2)"></p>
+          <div class="bg-[color-mix(in_srgb,var(--cc-surface)_60%,transparent)] border border-[var(--cc-border)] rounded-xl p-2.5 shadow-lg border-l-2 border-l-blue-500 hover:bg-[var(--cc-surface)] hover:scale-[1.03] hover:shadow-xl transition cursor-default" title="Sum of all cleared deposits">
+            <p class="text-[9px] font-bold uppercase text-[var(--cc-text-muted)]">Total Cleared</p>
+            <p class="text-base font-black text-[var(--cc-text)] mt-0.5" x-text="'$' + getTotalClearedDeposits().toFixed(2)"></p>
           </div>
-          <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 shadow-lg border-l-2 border-l-amber-500 hover:bg-slate-900 hover:scale-[1.03] hover:shadow-xl transition cursor-default" title="Vault balance including every scheduled transaction">
-            <p class="text-[9px] font-bold uppercase text-slate-400">Projected Vault</p>
-            <p class="text-base font-black text-amber-400 mt-0.5" x-text="'$' + getProjectedBalance().toFixed(2)"></p>
+          <div class="bg-[color-mix(in_srgb,var(--cc-surface)_60%,transparent)] border border-[var(--cc-border)] rounded-xl p-2.5 shadow-lg border-l-2 hover:bg-[var(--cc-surface)] hover:scale-[1.03] hover:shadow-xl transition cursor-default" style="border-left-color: var(--cc-highlight)" title="Vault balance including every scheduled transaction">
+            <p class="text-[9px] font-bold uppercase text-[var(--cc-text-muted)]">Projected Vault</p>
+            <p class="text-base font-black mt-0.5" style="color: var(--cc-highlight)" x-text="'$' + getProjectedBalance().toFixed(2)"></p>
           </div>
         </div>
 
-        <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 shadow-lg flex items-center justify-between flex-wrap gap-y-2">
-          <span class="text-xs font-semibold text-slate-300">Quick Actions</span>
+        <div class="bg-[color-mix(in_srgb,var(--cc-surface)_60%,transparent)] border border-[var(--cc-border)] rounded-xl p-2.5 shadow-lg flex items-center justify-between flex-wrap gap-y-2">
+          <span class="text-xs font-semibold text-[var(--cc-text-muted)]">Quick Actions</span>
           <div class="flex gap-2 flex-wrap justify-end">
-            <button x-show="can('officer')" @click="openTxForm()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-lg transition shadow-md">
+            <button x-show="can('officer')" @click="openTxForm()" class="bg-[var(--cc-primary)] hover:brightness-110 text-white text-xs font-bold px-3 py-1 rounded-lg transition shadow-md">
               + Transaction
             </button>
-            <button x-show="can('officer')" @click="showMemberForm = !showMemberForm" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-lg transition shadow-md">
+            <button x-show="can('officer')" @click="showMemberForm = !showMemberForm" class="bg-[var(--cc-accent)] hover:brightness-110 text-white text-xs font-bold px-3 py-1 rounded-lg transition shadow-md">
               + Member
             </button>
             <button @click="showBreakdown = true" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-3 py-1 rounded-lg transition shadow-md">
@@ -311,14 +391,14 @@
       </div>
 
       <!-- RIGHT: GRAPH -->
-      <div class="lg:col-span-8 bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 shadow-lg flex flex-col justify-between">
+      <div class="lg:col-span-8 bg-[color-mix(in_srgb,var(--cc-surface)_60%,transparent)] border border-[var(--cc-border)] rounded-xl p-3.5 shadow-lg flex flex-col justify-between">
         <div class="flex justify-between items-center mb-1 flex-wrap gap-y-1.5">
-          <h2 class="text-xs font-bold text-white flex items-center gap-2">📈 Balance Over Time</h2>
+          <h2 class="text-xs font-bold text-[var(--cc-text)] flex items-center gap-2">📈 Balance Over Time</h2>
           <div class="flex items-center gap-3 text-[10px]">
             <span class="flex items-center gap-1 text-emerald-400"><span class="w-2.5 h-0.5 bg-emerald-400 inline-block"></span> Cleared</span>
-            <span class="flex items-center gap-1 text-slate-400"><span class="w-2.5 h-0.5 border-b border-dashed border-slate-400 inline-block"></span> Scheduled</span>
+            <span class="flex items-center gap-1 text-[var(--cc-text-muted)]"><span class="w-2.5 h-0.5 border-b border-dashed border-slate-400 inline-block"></span> Scheduled</span>
             <span class="flex items-center gap-1 text-cyan-400"><span class="w-2.5 h-0.5 border-b border-dashed border-cyan-400 inline-block"></span> Today</span>
-            <select x-model="dateRangeMode" title="Date range — applies to graph & timeline" class="bg-slate-950 border border-slate-800 text-[10px] text-slate-300 rounded-lg px-1.5 py-0.5 focus:outline-none focus:border-emerald-500">
+            <select x-model="dateRangeMode" title="Date range — applies to graph & timeline" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-[10px] text-[var(--cc-text-muted)] rounded-lg px-1.5 py-0.5 focus:outline-none focus:border-emerald-500">
               <option value="default">2wk Prior · 1wk Fwd</option>
               <option value="1m">1 Month</option>
               <option value="3m">3 Months</option>
@@ -327,115 +407,65 @@
             </select>
             <template x-if="dateRangeMode === 'custom'">
               <div class="flex items-center gap-1">
-                <input type="date" x-model="customRangeStart" class="bg-slate-950 border border-slate-800 text-[10px] text-white rounded-lg px-1.5 py-0.5 focus:outline-none focus:border-emerald-500">
-                <span class="text-slate-500">–</span>
-                <input type="date" x-model="customRangeEnd" class="bg-slate-950 border border-slate-800 text-[10px] text-white rounded-lg px-1.5 py-0.5 focus:outline-none focus:border-emerald-500">
+                <input type="date" x-model="customRangeStart" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-[10px] text-[var(--cc-text)] rounded-lg px-1.5 py-0.5 focus:outline-none focus:border-emerald-500">
+                <span class="text-[var(--cc-text-muted)]">–</span>
+                <input type="date" x-model="customRangeEnd" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-[10px] text-[var(--cc-text)] rounded-lg px-1.5 py-0.5 focus:outline-none focus:border-emerald-500">
               </div>
             </template>
           </div>
         </div>
 
-        <div x-ref="chartWrap" class="relative bg-slate-950 border border-slate-800 rounded-xl p-1 w-full overflow-hidden">
+        <div x-ref="chartWrap" class="relative bg-[var(--cc-bg)] border border-[var(--cc-border)] rounded-xl p-1 w-full overflow-hidden">
           <div class="relative w-full" :style="'height:' + CHART_HEIGHT + 'px;'">
             <div class="w-full h-full" x-html="renderChartSvg()"></div>
 
             <!-- interactive hover dots, positioned in real px so they land exactly on the line -->
             <template x-for="(pt, idx) in getGraphPoints()" :key="idx">
               <div
-                class="absolute rounded-full cursor-pointer transition-all border-2 border-slate-950"
-                :class="pt.data.status === 'upcoming' ? 'bg-slate-400' : 'bg-emerald-400'"
-                :style="'left:' + pt.x + 'px; top:' + pt.y + 'px; width:' + (hoveredPoint && hoveredPoint.index === idx ? 13 : 8) + 'px; height:' + (hoveredPoint && hoveredPoint.index === idx ? 13 : 8) + 'px; transform: translate(-50%,-50%);'"
+                class="absolute rounded-full cursor-pointer transition-all border-2 border-[var(--cc-bg)]"
+                :class="pt.data.status === 'upcoming' ? 'bg-slate-400' : ''"
+                :style="'left:' + pt.x + 'px; top:' + pt.y + 'px; width:' + (hoveredPoint && hoveredPoint.index === idx ? 13 : 8) + 'px; height:' + (hoveredPoint && hoveredPoint.index === idx ? 13 : 8) + 'px; transform: translate(-50%,-50%);' + (pt.data.status !== 'upcoming' ? 'background-color:' + (pt.data.balance < 0 ? '#f87171' : '#34d399') + ';' : '')"
                 @mouseenter="hoveredPoint = { index: idx, ...pt.data }"
                 @mouseleave="hoveredPoint = null"
               ></div>
             </template>
           </div>
 
-          <div x-show="hoveredPoint" class="absolute top-2 right-2 bg-slate-900/95 border border-slate-700 px-3 py-1.5 rounded-xl shadow-2xl text-xs space-y-0.5 backdrop-blur-md z-30 pointer-events-none">
-            <p class="font-bold" :class="hoveredPoint?.status === 'upcoming' ? 'text-slate-400' : 'text-emerald-400'" x-text="hoveredPoint?.source + ' (' + hoveredPoint?.amount + ')'"></p>
-            <p class="text-slate-200">Vault Balance: <span class="font-black text-white" x-text="'$' + hoveredPoint?.balance"></span></p>
-            <p class="text-[10px] text-slate-400" x-text="'Date: ' + hoveredPoint?.date + ' | Status: ' + hoveredPoint?.status"></p>
+          <div x-show="hoveredPoint" class="absolute top-2 right-2 bg-[color-mix(in_srgb,var(--cc-surface)_95%,transparent)] border border-[var(--cc-border)] px-3 py-1.5 rounded-xl shadow-2xl text-xs space-y-0.5 backdrop-blur-md z-30 pointer-events-none">
+            <p class="font-bold" :class="hoveredPoint?.status === 'upcoming' ? 'text-[var(--cc-text-muted)]' : 'text-emerald-400'" x-text="hoveredPoint?.source + ' (' + hoveredPoint?.amount + ')'"></p>
+            <p class="text-[var(--cc-text-muted)]">Vault Balance: <span class="font-black text-[var(--cc-text)]" x-text="'$' + hoveredPoint?.balance"></span></p>
+            <p class="text-[10px] text-[var(--cc-text-muted)]" x-text="'Date: ' + hoveredPoint?.date + ' | Status: ' + hoveredPoint?.status"></p>
           </div>
         </div>
       </div>
     </div>
 
     <!-- ADMIN INPUT FORMS -->
-    <div x-show="showTxForm && can('officer')" x-transition class="row-start-3 bg-slate-900 border border-slate-800 p-3 rounded-xl space-y-2 flex-none">
-      <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Log Transaction (past, today, or scheduled)</h3>
-      <form @submit.prevent="addTransaction()" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
-        <input type="text" placeholder="Title / Source" x-model="newTx.source" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500" required>
-        <input type="number" step="0.01" min="0" placeholder="Amount ($)" x-model="newTx.amount" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500" required>
-        <select x-model="newTx.type" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500">
-          <option value="deposit">Deposit</option>
-          <option value="expense">Withdrawal</option>
-        </select>
-        <select x-model="newTx.category" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500">
-          <option value="Dues">Dues</option>
-          <option value="Fundraising">Fundraising</option>
-          <option value="Merchandise">Merchandise</option>
-          <option value="Events">Events</option>
-          <option value="Equipment">Equipment</option>
-          <option value="Travel">Travel</option>
-          <option value="Other">Other</option>
-        </select>
-        <input type="date" x-model="newTx.date" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500" required>
-        <input type="text" placeholder="Notes (optional)" x-model="newTx.notes" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500">
-        <label class="lg:col-span-3 flex items-center gap-2 text-[11px] text-slate-400 px-0.5">
-          <input type="checkbox" x-model="newTx.repeatMonthly" class="accent-emerald-500">
-          Repeat monthly for
-          <input type="number" min="2" max="24" x-model.number="newTx.repeatCount" :disabled="!newTx.repeatMonthly" class="w-14 bg-slate-950 border border-slate-800 text-xs text-white rounded px-1.5 py-0.5 disabled:opacity-40 focus:outline-none focus:border-emerald-500">
-          occurrences
-        </label>
-        <div class="lg:col-span-3 flex justify-end gap-2 pt-1">
-          <button type="button" @click="showTxForm = false" class="text-xs text-slate-400 hover:text-white px-2">Cancel</button>
-          <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-lg">Save</button>
-        </div>
-      </form>
-    </div>
-
-    <div x-show="showMemberForm && can('officer')" x-transition class="row-start-4 bg-slate-900 border border-slate-800 p-3 rounded-xl space-y-2 flex-none">
-      <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Add Member (dues roster)</h3>
-      <form @submit.prevent="addMember()" class="grid grid-cols-1 sm:grid-cols-4 gap-2">
-        <input type="text" placeholder="Full Name" x-model="newMember.name" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-500" required>
-        <select x-model="newMember.role" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-500">
-          <option value="Viewer">Viewer</option>
-          <option value="Officer">Officer</option>
-          <option value="Admin">Admin</option>
-        </select>
-        <input type="text" placeholder="Notes" x-model="newMember.notes" class="bg-slate-950 text-xs text-white border border-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-500">
-        <div class="flex gap-2">
-          <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-1.5 rounded-lg">Enlist</button>
-          <button type="button" @click="showMemberForm = false" class="text-xs text-slate-400 hover:text-white px-2">Cancel</button>
-        </div>
-      </form>
-    </div>
-
     <!-- LOWER SECTION: VERTICAL TIMELINE & ROSTER -->
-    <div class="row-start-5 grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch min-h-0">
+    <div class="row-start-3 grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch min-h-0">
 
       <!-- VERTICAL T-TIMELINE (8 cols) -->
-      <div class="lg:col-span-8 bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 shadow-lg flex flex-col min-h-[420px] lg:min-h-0">
+      <div class="lg:col-span-8 bg-[color-mix(in_srgb,var(--cc-surface)_60%,transparent)] border border-[var(--cc-border)] rounded-xl p-3.5 shadow-lg flex flex-col min-h-[420px] lg:min-h-0">
         <div class="flex justify-between items-start mb-2 flex-none gap-2 flex-wrap">
           <div>
-            <h2 class="text-xs font-bold text-white flex items-center gap-2">⚖️ Vertical Timeline (Drag cards to a new date row)</h2>
-            <p class="text-[10px] text-slate-400">Left = Deposits · Right = Withdrawals · Drop on a row's side to move date &amp; type</p>
+            <h2 class="text-xs font-bold text-[var(--cc-text)] flex items-center gap-2">⚖️ Vertical Timeline (Drag cards to a new date row)</h2>
+            <p class="text-[10px] text-[var(--cc-text-muted)]">Left = Deposits · Right = Withdrawals · Drop on a row's side to move date &amp; type</p>
           </div>
           <div class="flex items-center gap-2 flex-none">
-            <select x-model="dateRangeMode" title="Date range — applies to graph & timeline" class="bg-slate-950 border border-slate-800 text-[10px] text-slate-300 rounded-lg px-1.5 py-0.5 focus:outline-none focus:border-emerald-500">
+            <select x-model="dateRangeMode" title="Date range — applies to graph & timeline" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-[10px] text-[var(--cc-text-muted)] rounded-lg px-1.5 py-0.5 focus:outline-none focus:border-emerald-500">
               <option value="default">2wk Prior · 1wk Fwd</option>
               <option value="1m">1 Month</option>
               <option value="3m">3 Months</option>
               <option value="all">All Time</option>
               <option value="custom">Custom…</option>
             </select>
-            <span class="text-[10px] text-slate-500 font-mono whitespace-nowrap" x-text="getFilteredTransactions().length + ' of ' + transactions.length + ' items'"></span>
+            <span class="text-[10px] text-[var(--cc-text-muted)] font-mono whitespace-nowrap" x-text="getFilteredTransactions().length + ' of ' + transactions.length + ' items'"></span>
           </div>
         </div>
 
         <div class="flex items-center gap-2 mb-2 flex-none">
-          <input type="text" x-model="searchQuery" placeholder="Search transactions…" class="flex-1 bg-slate-950 border border-slate-800 text-[11px] text-white rounded-lg px-2.5 py-1 focus:outline-none focus:border-emerald-500">
-          <select x-model="categoryFilter" class="bg-slate-950 border border-slate-800 text-[11px] text-slate-300 rounded-lg px-2 py-1 focus:outline-none focus:border-emerald-500">
+          <input type="text" x-model="searchQuery" placeholder="Search transactions…" class="flex-1 bg-[var(--cc-bg)] border border-[var(--cc-border)] text-[11px] text-[var(--cc-text)] rounded-lg px-2.5 py-1 focus:outline-none focus:border-emerald-500">
+          <select x-model="categoryFilter" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-[11px] text-[var(--cc-text-muted)] rounded-lg px-2 py-1 focus:outline-none focus:border-emerald-500">
             <option value="All">All Categories</option>
             <option value="Dues">Dues</option>
             <option value="Fundraising">Fundraising</option>
@@ -447,12 +477,12 @@
           </select>
         </div>
 
-        <div x-ref="timelineScroll" class="relative flex-1 min-h-0 overflow-y-auto border border-slate-800 rounded-xl bg-slate-950/60 px-2 py-3">
+        <div x-ref="timelineScroll" class="relative flex-1 min-h-0 overflow-y-auto border border-[var(--cc-border)] rounded-xl bg-[color-mix(in_srgb,var(--cc-bg)_60%,transparent)] px-2 py-3">
           <div class="relative">
           <!-- center spine (only meaningful once deposits/withdrawals split into two columns) —
                lives inside this content wrapper (not the scroll container) so inset-y-0 spans
                the full scrollable content height, not just the visible viewport. -->
-          <div class="hidden sm:block absolute inset-y-0 left-1/2 w-0 border-r-2 border-dashed border-slate-800 pointer-events-none"></div>
+          <div class="hidden sm:block absolute inset-y-0 left-1/2 w-0 border-r-2 border-dashed border-[var(--cc-border)] pointer-events-none"></div>
 
           <template x-if="transactions.length === 0">
             <div class="text-center py-10 text-slate-600 text-[11px] italic">No transactions yet. Use "+ Transaction" to log or schedule one.</div>
@@ -480,7 +510,7 @@
                 <div>
                 <div class="flex items-center gap-2 mt-1 mb-0.5">
                   <div class="flex-1"></div>
-                  <span class="text-[9px] font-bold px-1.5" :class="row.empty ? 'text-slate-700 bg-slate-950' : 'text-slate-500 bg-slate-950'" x-text="formatDate(row.date)"></span>
+                  <span class="text-[9px] font-bold px-1.5" :class="row.empty ? 'text-slate-700 bg-[var(--cc-bg)]' : 'text-[var(--cc-text-muted)] bg-[var(--cc-bg)]'" x-text="formatDate(row.date)"></span>
                   <div class="flex-1"></div>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-0 py-1.5">
@@ -492,23 +522,25 @@
                        @drop="handleDrop($event, 'deposit', row.date)">
                     <template x-for="item in row.deposits" :key="item.id">
                       <div :draggable="can('officer')" @dragstart="handleDragStart($event, item)"
-                           class="draggable-item bg-slate-900 border p-2 rounded-lg flex items-center justify-between gap-2 shadow-md w-full sm:max-w-[280px] hover:shadow-xl hover:brightness-110 transition"
-                           :class="isUpcoming(item.date) ? 'border-slate-800 bg-slate-900/40 text-slate-400' : 'border-emerald-900/60 text-emerald-300'">
+                           class="draggable-item bg-[var(--cc-surface)] border p-2 rounded-lg flex items-center justify-between gap-2 shadow-md w-full sm:max-w-[280px] hover:shadow-xl hover:brightness-110 transition"
+                           :class="isUpcoming(item.date) ? 'border-[var(--cc-border)] bg-[color-mix(in_srgb,var(--cc-surface)_40%,transparent)] text-[var(--cc-text-muted)]' : 'border-emerald-900/60 text-emerald-300'">
                         <div class="min-w-0">
                           <div class="flex items-center gap-1.5">
-                            <span class="text-xs font-bold text-white truncate" x-text="item.source"></span>
+                            <span class="text-xs font-bold text-[var(--cc-text)] truncate" x-text="item.source"></span>
                             <span x-show="!item.duesFor && item.category && item.category !== 'Other'" class="text-[8px] px-1.5 py-0.5 rounded border flex-none" :class="categoryClass(item.category)" x-text="item.category"></span>
                             <span x-show="item.duesFor" class="text-[8px] bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded border border-purple-500/30 flex-none">Dues</span>
                             <span x-show="item.recurringGroup" class="text-[8px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/30 flex-none">↻ Recurring</span>
-                            <span x-show="isUpcoming(item.date)" class="text-[8px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700 flex-none">Scheduled</span>
+                            <span x-show="isUpcoming(item.date)" class="text-[8px] bg-[var(--cc-chip)] text-[var(--cc-text-muted)] px-1.5 py-0.5 rounded border border-[var(--cc-border)] flex-none">Scheduled</span>
                           </div>
                           <div class="flex items-center gap-1.5">
-                            <span class="text-[9px] text-slate-500 font-mono" x-text="formatDate(item.date)"></span>
-                            <p class="text-[9px] text-slate-500 truncate" x-show="item.notes" x-text="item.notes"></p>
+                            <button x-show="can('officer') && editingDateId !== item.id" @click.stop="editingDateId = item.id" type="button" class="text-[9px] text-[var(--cc-text-muted)] font-mono hover:text-emerald-400 hover:underline decoration-dashed underline-offset-2" title="Click to move this transaction to a different date" x-text="formatDate(item.date)"></button>
+                            <span x-show="!can('officer')" class="text-[9px] text-[var(--cc-text-muted)] font-mono" x-text="formatDate(item.date)"></span>
+                            <input x-show="can('officer') && editingDateId === item.id" type="date" x-model="item.date" @change="syncToFirebase(); editingDateId = null" @click.stop @blur="editingDateId = null" class="text-[9px] bg-[var(--cc-bg)] border border-emerald-600 text-[var(--cc-text)] font-mono rounded px-1 py-0 w-[92px]">
+                            <p class="text-[9px] text-[var(--cc-text-muted)] truncate" x-show="item.notes" x-text="item.notes"></p>
                           </div>
                         </div>
                         <div class="flex items-center gap-2 flex-none">
-                          <span class="text-xs font-bold font-mono" :class="isUpcoming(item.date) ? 'text-slate-400' : 'text-emerald-400'" x-text="'+$' + Number(item.amount).toFixed(2)"></span>
+                          <span class="text-xs font-bold font-mono" :class="isUpcoming(item.date) ? 'text-[var(--cc-text-muted)]' : 'text-emerald-400'" x-text="'+$' + Number(item.amount).toFixed(2)"></span>
                           <button x-show="can('officer')" @click="deleteTransaction(item.id)" class="text-slate-600 hover:text-rose-400 text-xs" aria-label="Delete transaction">✕</button>
                         </div>
                       </div>
@@ -526,22 +558,24 @@
                        @drop="handleDrop($event, 'expense', row.date)">
                     <template x-for="item in row.withdrawals" :key="item.id">
                       <div :draggable="can('officer')" @dragstart="handleDragStart($event, item)"
-                           class="draggable-item bg-slate-900 border p-2 rounded-lg flex items-center justify-between gap-2 shadow-md w-full sm:max-w-[280px] hover:shadow-xl hover:brightness-110 transition"
-                           :class="isUpcoming(item.date) ? 'border-slate-800 bg-slate-900/40 text-slate-400' : 'border-rose-900/60 text-rose-300'">
+                           class="draggable-item bg-[var(--cc-surface)] border p-2 rounded-lg flex items-center justify-between gap-2 shadow-md w-full sm:max-w-[280px] hover:shadow-xl hover:brightness-110 transition"
+                           :class="isUpcoming(item.date) ? 'border-[var(--cc-border)] bg-[color-mix(in_srgb,var(--cc-surface)_40%,transparent)] text-[var(--cc-text-muted)]' : 'border-rose-900/60 text-rose-300'">
                         <div class="flex items-center gap-2 flex-none">
                           <button x-show="can('officer')" @click="deleteTransaction(item.id)" class="text-slate-600 hover:text-rose-400 text-xs" aria-label="Delete transaction">✕</button>
-                          <span class="text-xs font-bold font-mono" :class="isUpcoming(item.date) ? 'text-slate-400' : 'text-rose-400'" x-text="'-$' + Number(item.amount).toFixed(2)"></span>
+                          <span class="text-xs font-bold font-mono" :class="isUpcoming(item.date) ? 'text-[var(--cc-text-muted)]' : 'text-rose-400'" x-text="'-$' + Number(item.amount).toFixed(2)"></span>
                         </div>
                         <div class="min-w-0 text-right">
                           <div class="flex items-center gap-1.5 justify-end">
-                            <span x-show="isUpcoming(item.date)" class="text-[8px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700 flex-none">Scheduled</span>
+                            <span x-show="isUpcoming(item.date)" class="text-[8px] bg-[var(--cc-chip)] text-[var(--cc-text-muted)] px-1.5 py-0.5 rounded border border-[var(--cc-border)] flex-none">Scheduled</span>
                             <span x-show="item.recurringGroup" class="text-[8px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/30 flex-none">↻ Recurring</span>
                             <span x-show="item.category && item.category !== 'Other'" class="text-[8px] px-1.5 py-0.5 rounded border flex-none" :class="categoryClass(item.category)" x-text="item.category"></span>
-                            <span class="text-xs font-bold text-white truncate" x-text="item.source"></span>
+                            <span class="text-xs font-bold text-[var(--cc-text)] truncate" x-text="item.source"></span>
                           </div>
                           <div class="flex items-center gap-1.5 justify-end">
-                            <p class="text-[9px] text-slate-500 truncate" x-show="item.notes" x-text="item.notes"></p>
-                            <span class="text-[9px] text-slate-500 font-mono" x-text="formatDate(item.date)"></span>
+                            <p class="text-[9px] text-[var(--cc-text-muted)] truncate" x-show="item.notes" x-text="item.notes"></p>
+                            <input x-show="can('officer') && editingDateId === item.id" type="date" x-model="item.date" @change="syncToFirebase(); editingDateId = null" @click.stop @blur="editingDateId = null" class="text-[9px] bg-[var(--cc-bg)] border border-rose-600 text-[var(--cc-text)] font-mono rounded px-1 py-0 w-[92px]">
+                            <span x-show="!can('officer')" class="text-[9px] text-[var(--cc-text-muted)] font-mono" x-text="formatDate(item.date)"></span>
+                            <button x-show="can('officer') && editingDateId !== item.id" @click.stop="editingDateId = item.id" type="button" class="text-[9px] text-[var(--cc-text-muted)] font-mono hover:text-rose-400 hover:underline decoration-dashed underline-offset-2" title="Click to move this transaction to a different date" x-text="formatDate(item.date)"></button>
                           </div>
                         </div>
                       </div>
@@ -557,20 +591,20 @@
       </div>
 
       <!-- ROSTER PANEL (4 cols) -->
-      <div class="lg:col-span-4 bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 shadow-lg flex flex-col min-h-[260px] lg:min-h-0 overflow-y-auto">
+      <div class="lg:col-span-4 bg-[color-mix(in_srgb,var(--cc-surface)_60%,transparent)] border border-[var(--cc-border)] rounded-xl p-3.5 shadow-lg flex flex-col min-h-[260px] lg:min-h-0 overflow-y-auto">
         <div class="flex justify-between items-center mb-1 flex-none">
-          <h2 class="text-xs font-bold text-white flex items-center gap-2">👥 Roster &amp; Dues</h2>
-          <span class="text-[10px] text-slate-500 font-mono" x-text="roster.length + ' members'"></span>
+          <h2 class="text-xs font-bold text-[var(--cc-text)] flex items-center gap-2">👥 Roster &amp; Dues</h2>
+          <span class="text-[10px] text-[var(--cc-text-muted)] font-mono" x-text="roster.length + ' members'"></span>
         </div>
 
         <div class="flex items-center justify-between gap-2 mb-2 flex-none">
           <template x-if="!editingDues">
-            <span class="text-[10px] text-slate-400">Dues Amount: <span class="font-bold text-slate-200" x-text="'$' + Number(duesAmount).toFixed(2)"></span></span>
+            <span class="text-[10px] text-[var(--cc-text-muted)]">Dues Amount: <span class="font-bold text-[var(--cc-text-muted)]" x-text="'$' + Number(duesAmount).toFixed(2)"></span></span>
           </template>
           <template x-if="editingDues && can('admin')">
             <div class="flex items-center gap-1.5">
-              <span class="text-[10px] text-slate-400">$</span>
-              <input type="number" step="0.01" min="0" x-model.number="duesAmount" class="bg-slate-950 border border-slate-700 text-[10px] text-white px-1.5 py-0.5 rounded w-20 focus:outline-none focus:border-blue-500">
+              <span class="text-[10px] text-[var(--cc-text-muted)]">$</span>
+              <input type="number" step="0.01" min="0" x-model.number="duesAmount" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-[10px] text-[var(--cc-text)] px-1.5 py-0.5 rounded w-20 focus:outline-none focus:border-blue-500">
             </div>
           </template>
           <button x-show="can('admin')" @click="toggleEditDues()" class="text-[10px] text-blue-400 hover:underline">
@@ -584,13 +618,13 @@
           </template>
 
           <template x-for="member in roster" :key="member.id">
-            <div class="bg-slate-950/70 border border-slate-800 hover:border-slate-700 hover:bg-slate-900/70 p-2.5 rounded-lg transition">
+            <div class="bg-[color-mix(in_srgb,var(--cc-bg)_70%,transparent)] border border-[var(--cc-border)] hover:border-[var(--cc-border)] hover:bg-[color-mix(in_srgb,var(--cc-surface)_70%,transparent)] p-2.5 rounded-lg transition">
               <div class="flex items-center justify-between gap-2">
                 <div class="flex items-center gap-2 min-w-0">
                   <span class="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black text-white flex-none" :class="avatarColor(member.name)" x-text="initials(member.name)"></span>
                   <div class="min-w-0">
-                    <p class="text-xs font-bold text-slate-200 truncate" x-text="member.name"></p>
-                    <p class="text-[9px] text-slate-500 truncate" x-show="member.notes" x-text="member.notes"></p>
+                    <p class="text-xs font-bold text-[var(--cc-text-muted)] truncate" x-text="member.name"></p>
+                    <p class="text-[9px] text-[var(--cc-text-muted)] truncate" x-show="member.notes" x-text="member.notes"></p>
                   </div>
                 </div>
                 <div class="flex items-center gap-2 flex-none">
@@ -602,15 +636,15 @@
                 </div>
               </div>
               <div class="mt-1.5 flex items-center gap-2">
-                <span class="text-[9px] text-slate-500">Position:</span>
+                <span class="text-[9px] text-[var(--cc-text-muted)]">Position:</span>
                 <select x-show="can('admin')" x-model="member.role" @change="syncToFirebase()"
-                        class="bg-slate-900 border border-slate-800 text-[9px] text-slate-300 rounded px-1.5 py-0.5 focus:outline-none focus:border-blue-500">
+                        class="bg-[var(--cc-surface)] border border-[var(--cc-border)] text-[9px] text-[var(--cc-text-muted)] rounded px-1.5 py-0.5 focus:outline-none focus:border-blue-500">
                   <option value="Viewer">Viewer</option>
                   <option value="Officer">Officer</option>
                   <option value="Admin">Admin</option>
                 </select>
                 <span x-show="!can('admin')" class="text-[9px] font-bold px-1.5 py-0.5 rounded border"
-                      :class="member.role === 'Admin' ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : (member.role === 'Officer' ? 'text-blue-400 border-blue-500/30 bg-blue-500/10' : 'text-slate-400 border-slate-700 bg-slate-800/50')"
+                      :class="member.role === 'Admin' ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : (member.role === 'Officer' ? 'text-blue-400 border-blue-500/30 bg-blue-500/10' : 'text-[var(--cc-text-muted)] border-[var(--cc-border)] bg-[var(--cc-chip)]/50')"
                       x-text="member.role"></span>
               </div>
             </div>
@@ -618,22 +652,22 @@
         </div>
 
         <!-- ACCESS & JOIN REQUESTS (officer+ can approve/deny; admin manages members) -->
-        <div x-show="can('officer')" class="mt-3 pt-3 border-t border-slate-800 flex-none space-y-3">
+        <div x-show="can('officer')" class="mt-3 pt-3 border-t border-[var(--cc-border)] flex-none space-y-3">
           <div>
-            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Pending Access Requests</p>
+            <p class="text-[10px] font-bold uppercase tracking-wider text-[var(--cc-text-muted)] mb-1.5">Pending Access Requests</p>
             <template x-if="Object.keys(clubJoinRequests).length === 0">
               <p class="text-[10px] text-slate-600 italic">No pending requests.</p>
             </template>
             <div class="space-y-1.5">
               <template x-for="[uid, req] in Object.entries(clubJoinRequests)" :key="uid">
-                <div class="flex items-center justify-between bg-slate-950/70 border border-slate-800 hover:border-amber-500/30 p-2 rounded-lg transition gap-2">
+                <div class="flex items-center justify-between bg-[color-mix(in_srgb,var(--cc-bg)_70%,transparent)] border border-[var(--cc-border)] hover:border-amber-500/30 p-2 rounded-lg transition gap-2">
                   <div class="flex items-center gap-1.5 min-w-0">
                     <span class="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black text-white flex-none" :class="avatarColor(req.name || req.email)" :title="req.email" x-text="initials(req.name || req.email)"></span>
-                    <span class="text-[10px] text-slate-300 truncate" x-text="req.name || req.email"></span>
+                    <span class="text-[10px] text-[var(--cc-text-muted)] truncate" x-text="req.name || req.email"></span>
                   </div>
                   <div class="flex items-center gap-1.5 flex-none">
                     <button @click="approveRequest(uid, req.email, req.name)" class="text-[9px] font-bold bg-emerald-600 hover:bg-emerald-500 hover:scale-105 text-white px-2 py-0.5 rounded transition">Approve</button>
-                    <button @click="denyRequest(uid, req.email, req.name)" class="text-[9px] font-bold bg-slate-800 hover:bg-rose-600 hover:scale-105 text-slate-300 hover:text-white px-2 py-0.5 rounded transition">Deny</button>
+                    <button @click="denyRequest(uid, req.email, req.name)" class="text-[9px] font-bold bg-[var(--cc-chip)] hover:bg-rose-600 hover:scale-105 text-[var(--cc-text-muted)] hover:text-white px-2 py-0.5 rounded transition">Deny</button>
                   </div>
                 </div>
               </template>
@@ -641,16 +675,16 @@
           </div>
 
           <div x-show="can('admin')">
-            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Club Members (login access)</p>
+            <p class="text-[10px] font-bold uppercase tracking-wider text-[var(--cc-text-muted)] mb-1.5">Club Members (login access)</p>
             <div class="space-y-1.5">
               <template x-for="[uid, m] in Object.entries(clubMembers)" :key="uid">
-                <div class="flex items-center justify-between bg-slate-950/70 border border-slate-800 hover:border-slate-700 p-2 rounded-lg gap-2 transition">
+                <div class="flex items-center justify-between bg-[color-mix(in_srgb,var(--cc-bg)_70%,transparent)] border border-[var(--cc-border)] hover:border-[var(--cc-border)] p-2 rounded-lg gap-2 transition">
                   <div class="flex items-center gap-1.5 min-w-0">
                     <span class="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black text-white flex-none" :class="avatarColor(m.name || m.email)" :title="m.email" x-text="initials(m.name || m.email)"></span>
-                    <span class="text-[10px] text-slate-300 truncate" x-text="m.name || m.email"></span>
+                    <span class="text-[10px] text-[var(--cc-text-muted)] truncate" x-text="m.name || m.email"></span>
                   </div>
                   <div class="flex items-center gap-1.5 flex-none">
-                    <select :value="m.role" @change="setMemberRole(uid, $event.target.value)" class="bg-slate-900 border border-slate-800 text-[9px] text-slate-300 rounded px-1 py-0.5 focus:outline-none focus:border-blue-500" title="Viewer: read-only · Officer: add/edit transactions & members · Admin: full control">
+                    <select :value="m.role" @change="setMemberRole(uid, $event.target.value)" class="bg-[var(--cc-surface)] border border-[var(--cc-border)] text-[9px] text-[var(--cc-text-muted)] rounded px-1 py-0.5 focus:outline-none focus:border-blue-500" title="Viewer: read-only · Officer: add/edit transactions & members · Admin: full control">
                       <option value="viewer">Viewer</option>
                       <option value="officer">Officer</option>
                       <option value="admin">Admin</option>
@@ -668,27 +702,143 @@
 
   </main>
 
+  <!-- LOG TRANSACTION MODAL -->
+  <div x-show="showTxForm && can('officer')" x-cloak class="fixed inset-0 bg-[color-mix(in_srgb,var(--cc-bg)_80%,transparent)] backdrop-blur-sm z-50 flex items-center justify-center p-4" x-transition>
+    <div class="bg-[var(--cc-surface)] border border-[var(--cc-border)] rounded-xl shadow-2xl w-[80vw] max-w-2xl h-[80vh] flex flex-col">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-[var(--cc-border)] flex-none">
+        <h3 class="text-sm font-bold text-[var(--cc-text)]">Log Transaction <span class="text-[var(--cc-text-muted)] font-normal">(past, today, or scheduled)</span></h3>
+        <button @click="showTxForm = false" class="text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] text-lg leading-none" aria-label="Close">✕</button>
+      </div>
+
+      <form @submit.prevent="addTransaction()" class="flex-1 min-h-0 overflow-y-auto px-5 py-4 flex flex-col">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1 content-start">
+          <div>
+            <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Title / Source</label>
+            <input type="text" placeholder="e.g. Membership Dues" x-model="newTx.source" class="w-full mt-1 bg-[var(--cc-bg)] text-sm text-[var(--cc-text)] border border-[var(--cc-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500" required>
+          </div>
+          <div>
+            <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Amount ($)</label>
+            <input type="number" step="0.01" min="0" placeholder="0.00" x-model="newTx.amount" class="w-full mt-1 bg-[var(--cc-bg)] text-sm text-[var(--cc-text)] border border-[var(--cc-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500" required>
+          </div>
+          <div>
+            <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Type</label>
+            <select x-model="newTx.type" class="w-full mt-1 bg-[var(--cc-bg)] text-sm text-[var(--cc-text)] border border-[var(--cc-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500">
+              <option value="deposit">Deposit</option>
+              <option value="expense">Withdrawal</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Category</label>
+            <select x-model="newTx.category" class="w-full mt-1 bg-[var(--cc-bg)] text-sm text-[var(--cc-text)] border border-[var(--cc-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500">
+              <option value="Dues">Dues</option>
+              <option value="Fundraising">Fundraising</option>
+              <option value="Merchandise">Merchandise</option>
+              <option value="Events">Events</option>
+              <option value="Equipment">Equipment</option>
+              <option value="Travel">Travel</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Date</label>
+            <input type="date" x-model="newTx.date" class="w-full mt-1 bg-[var(--cc-bg)] text-sm text-[var(--cc-text)] border border-[var(--cc-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500" required>
+          </div>
+          <div>
+            <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Notes <span class="text-slate-600 normal-case font-normal">(optional)</span></label>
+            <input type="text" placeholder="Notes" x-model="newTx.notes" class="w-full mt-1 bg-[var(--cc-bg)] text-sm text-[var(--cc-text)] border border-[var(--cc-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500">
+          </div>
+          <label class="sm:col-span-2 flex items-center gap-2 text-xs text-[var(--cc-text-muted)] px-0.5 pt-1">
+            <input type="checkbox" x-model="newTx.repeatMonthly" class="accent-emerald-500 w-4 h-4">
+            Repeat monthly for
+            <input type="number" min="2" max="24" x-model.number="newTx.repeatCount" :disabled="!newTx.repeatMonthly" class="w-16 bg-[var(--cc-bg)] border border-[var(--cc-border)] text-xs text-[var(--cc-text)] rounded px-2 py-1 disabled:opacity-40 focus:outline-none focus:border-emerald-500">
+            occurrences
+          </label>
+        </div>
+
+        <div class="flex-none flex justify-end gap-2 pt-4 mt-4 border-t border-[var(--cc-border)]">
+          <button type="button" @click="showTxForm = false" class="text-sm font-bold text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] px-4 py-2 rounded-lg transition">Cancel</button>
+          <button type="submit" class="bg-[var(--cc-primary)] hover:brightness-110 text-white text-sm font-bold px-5 py-2 rounded-lg transition">Save Transaction</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ADD MEMBER MODAL -->
+  <div x-show="showMemberForm && can('officer')" x-cloak class="fixed inset-0 bg-[color-mix(in_srgb,var(--cc-bg)_80%,transparent)] backdrop-blur-sm z-50 flex items-center justify-center p-4" x-transition>
+    <div class="bg-[var(--cc-surface)] border border-[var(--cc-border)] rounded-xl shadow-2xl w-[80vw] max-w-xl h-[80vh] flex flex-col">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-[var(--cc-border)] flex-none">
+        <h3 class="text-sm font-bold text-[var(--cc-text)]">Add Member <span class="text-[var(--cc-text-muted)] font-normal">(dues roster)</span></h3>
+        <button @click="showMemberForm = false" class="text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] text-lg leading-none" aria-label="Close">✕</button>
+      </div>
+
+      <form @submit.prevent="addMember()" class="flex-1 min-h-0 overflow-y-auto px-5 py-4 flex flex-col">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1 content-start">
+          <div class="sm:col-span-2">
+            <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Full Name</label>
+            <input type="text" placeholder="Full Name" x-model="newMember.name" class="w-full mt-1 bg-[var(--cc-bg)] text-sm text-[var(--cc-text)] border border-[var(--cc-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500" required>
+          </div>
+          <div>
+            <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Position</label>
+            <select x-model="newMember.role" class="w-full mt-1 bg-[var(--cc-bg)] text-sm text-[var(--cc-text)] border border-[var(--cc-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500">
+              <option value="Viewer">Viewer</option>
+              <option value="Officer">Officer</option>
+              <option value="Admin">Admin</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Notes <span class="text-slate-600 normal-case font-normal">(optional)</span></label>
+            <input type="text" placeholder="Notes" x-model="newMember.notes" class="w-full mt-1 bg-[var(--cc-bg)] text-sm text-[var(--cc-text)] border border-[var(--cc-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500">
+          </div>
+        </div>
+
+        <div class="flex-none flex justify-end gap-2 pt-4 mt-4 border-t border-[var(--cc-border)]">
+          <button type="button" @click="showMemberForm = false" class="text-sm font-bold text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] px-4 py-2 rounded-lg transition">Cancel</button>
+          <button type="submit" class="bg-[var(--cc-accent)] hover:brightness-110 text-white text-sm font-bold px-5 py-2 rounded-lg transition">Enlist Member</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- CLUB SETTINGS MODAL -->
-  <div x-show="showClubSettings" x-cloak class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-transition>
-    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl max-w-sm w-full space-y-4 shadow-2xl">
+  <div x-show="showClubSettings" x-cloak class="fixed inset-0 bg-[color-mix(in_srgb,var(--cc-bg)_80%,transparent)] backdrop-blur-sm z-50 flex items-center justify-center p-4" x-transition>
+    <div class="bg-[var(--cc-surface)] border border-[var(--cc-border)] p-5 rounded-xl max-w-sm w-full space-y-4 shadow-2xl">
       <div class="flex items-center justify-between">
-        <h3 class="text-sm font-bold text-white flex items-center gap-2">⚙ Club Settings</h3>
-        <button @click="showClubSettings = false" class="text-slate-500 hover:text-white text-sm" aria-label="Close">✕</button>
+        <h3 class="text-sm font-bold text-[var(--cc-text)] flex items-center gap-2">⚙ Club Settings</h3>
+        <button @click="showClubSettings = false" class="text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] text-sm" aria-label="Close">✕</button>
       </div>
 
       <form @submit.prevent="saveClubSettings()" class="space-y-2.5">
         <div>
-          <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Club Name</label>
-          <input type="text" x-model="clubSettingsForm.name" required class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500">
+          <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Club Name</label>
+          <input type="text" x-model="clubSettingsForm.name" required class="w-full bg-[var(--cc-bg)] border border-[var(--cc-border)] text-sm text-[var(--cc-text)] rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500">
         </div>
         <div>
-          <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Contact Email <span class="text-slate-600 normal-case font-normal">(optional)</span></label>
-          <input type="email" x-model="clubSettingsForm.contactEmail" class="w-full bg-slate-950 border border-slate-800 text-sm text-white rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="myclub@school.edu">
+          <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Contact Email <span class="text-slate-600 normal-case font-normal">(optional)</span></label>
+          <input type="email" x-model="clubSettingsForm.contactEmail" class="w-full bg-[var(--cc-bg)] border border-[var(--cc-border)] text-sm text-[var(--cc-text)] rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500" placeholder="myclub@school.edu">
         </div>
-        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold py-2 rounded-lg transition">Save Changes</button>
+        <div class="pt-1">
+          <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Theme Colors</label>
+          <p class="text-[10px] text-slate-600 mb-1.5">Sets the club's accent colors across the dashboard (buttons, the balance graph, and highlights).</p>
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <input type="color" x-model="clubThemeForm.primary" class="w-full h-8 rounded-lg border border-[var(--cc-border)] bg-[var(--cc-bg)] cursor-pointer">
+              <p class="text-[9px] text-[var(--cc-text-muted)] text-center mt-0.5">Primary</p>
+            </div>
+            <div>
+              <input type="color" x-model="clubThemeForm.accent" class="w-full h-8 rounded-lg border border-[var(--cc-border)] bg-[var(--cc-bg)] cursor-pointer">
+              <p class="text-[9px] text-[var(--cc-text-muted)] text-center mt-0.5">Accent</p>
+            </div>
+            <div>
+              <input type="color" x-model="clubThemeForm.highlight" class="w-full h-8 rounded-lg border border-[var(--cc-border)] bg-[var(--cc-bg)] cursor-pointer">
+              <p class="text-[9px] text-[var(--cc-text-muted)] text-center mt-0.5">Highlight</p>
+            </div>
+          </div>
+          <button type="button" @click="resetClubTheme()" class="text-[10px] text-[var(--cc-text-muted)] hover:text-[var(--cc-text-muted)] hover:underline mt-1.5">Reset to default colors</button>
+        </div>
+        <button type="submit" class="w-full bg-[var(--cc-primary)] hover:brightness-110 text-white text-sm font-bold py-2 rounded-lg transition">Save Changes</button>
       </form>
 
-      <div class="pt-3 border-t border-slate-800">
+      <div class="pt-3 border-t border-[var(--cc-border)]">
         <p class="text-[10px] font-bold uppercase tracking-wider text-rose-400 mb-1.5">Danger Zone</p>
         <button @click="deleteClub()" class="w-full bg-rose-950/60 hover:bg-rose-900 border border-rose-800 text-rose-300 text-xs font-bold py-2 rounded-lg transition">
           Delete This Club Permanently
@@ -698,24 +848,73 @@
     </div>
   </div>
 
+  <!-- CHANGE EMAIL MODAL -->
+  <div x-show="showChangeEmail" x-cloak class="fixed inset-0 bg-[color-mix(in_srgb,var(--cc-bg)_80%,transparent)] backdrop-blur-sm z-50 flex items-center justify-center p-4" x-transition>
+    <div class="bg-[var(--cc-surface)] border border-[var(--cc-border)] p-5 rounded-xl max-w-sm w-full space-y-3 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-[var(--cc-text)] flex items-center gap-2">📧 Change Email</h3>
+        <button @click="showChangeEmail = false" class="text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] text-sm" aria-label="Close">✕</button>
+      </div>
+      <p class="text-[11px] text-[var(--cc-text-muted)]">We'll send a verification link to your new address — your email won't change until you click it.</p>
+      <form @submit.prevent="submitChangeEmail()" class="space-y-2.5">
+        <div>
+          <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">New Email</label>
+          <input type="email" x-model="changeEmailForm.newEmail" required class="w-full bg-[var(--cc-bg)] border border-[var(--cc-border)] text-sm text-[var(--cc-text)] rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500">
+        </div>
+        <div>
+          <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Current Password</label>
+          <input type="password" x-model="changeEmailForm.currentPassword" required autocomplete="current-password" class="w-full bg-[var(--cc-bg)] border border-[var(--cc-border)] text-sm text-[var(--cc-text)] rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500">
+        </div>
+        <p x-show="changeEmailError" class="text-[11px] text-rose-400" x-text="changeEmailError"></p>
+        <button type="submit" :disabled="changingEmail" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-bold py-2 rounded-lg transition" x-text="changingEmail ? 'Sending…' : 'Send Verification Link'"></button>
+      </form>
+    </div>
+  </div>
+
+  <!-- CHANGE PASSWORD MODAL -->
+  <div x-show="showChangePassword" x-cloak class="fixed inset-0 bg-[color-mix(in_srgb,var(--cc-bg)_80%,transparent)] backdrop-blur-sm z-50 flex items-center justify-center p-4" x-transition>
+    <div class="bg-[var(--cc-surface)] border border-[var(--cc-border)] p-5 rounded-xl max-w-sm w-full space-y-3 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-[var(--cc-text)] flex items-center gap-2">🔒 Change Password</h3>
+        <button @click="showChangePassword = false" class="text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] text-sm" aria-label="Close">✕</button>
+      </div>
+      <form @submit.prevent="submitChangePassword()" class="space-y-2.5">
+        <div>
+          <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Current Password</label>
+          <input type="password" x-model="changePasswordForm.currentPassword" required autocomplete="current-password" class="w-full bg-[var(--cc-bg)] border border-[var(--cc-border)] text-sm text-[var(--cc-text)] rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500">
+        </div>
+        <div>
+          <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">New Password</label>
+          <input type="password" x-model="changePasswordForm.newPassword" required autocomplete="new-password" class="w-full bg-[var(--cc-bg)] border border-[var(--cc-border)] text-sm text-[var(--cc-text)] rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500">
+        </div>
+        <div>
+          <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Confirm New Password</label>
+          <input type="password" x-model="changePasswordForm.confirmPassword" required autocomplete="new-password" class="w-full bg-[var(--cc-bg)] border border-[var(--cc-border)] text-sm text-[var(--cc-text)] rounded-lg px-3 py-2 mt-1 focus:outline-none focus:border-emerald-500">
+        </div>
+        <p x-show="changePasswordError" class="text-[11px] text-rose-400" x-text="changePasswordError"></p>
+        <button type="submit" :disabled="changingPassword" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-bold py-2 rounded-lg transition" x-text="changingPassword ? 'Updating…' : 'Update Password'"></button>
+      </form>
+    </div>
+  </div>
+
   <!-- ACTIVITY LOG MODAL -->
-  <div x-show="showActivityLog" x-cloak class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-transition>
-    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl max-w-md w-full shadow-2xl max-h-[80vh] flex flex-col">
+  <div x-show="showActivityLog" x-cloak class="fixed inset-0 bg-[color-mix(in_srgb,var(--cc-bg)_80%,transparent)] backdrop-blur-sm z-50 flex items-center justify-center p-4" x-transition>
+    <div class="bg-[var(--cc-surface)] border border-[var(--cc-border)] p-5 rounded-xl max-w-md w-full shadow-2xl max-h-[80vh] flex flex-col">
       <div class="flex items-center justify-between mb-3 flex-none">
-        <h3 class="text-sm font-bold text-white flex items-center gap-2">📜 Activity Log</h3>
-        <button @click="showActivityLog = false" class="text-slate-500 hover:text-white text-sm" aria-label="Close">✕</button>
+        <h3 class="text-sm font-bold text-[var(--cc-text)] flex items-center gap-2">📜 Activity Log</h3>
+        <button @click="showActivityLog = false" class="text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] text-sm" aria-label="Close">✕</button>
       </div>
       <div class="overflow-y-auto space-y-2 pr-1">
         <template x-if="activityLog.length === 0">
           <p class="text-center py-8 text-slate-600 text-xs italic">No activity recorded yet.</p>
         </template>
         <template x-for="entry in activityLog" :key="entry.ts + entry.actor">
-          <div class="flex items-start gap-2 bg-slate-950/60 border border-slate-800 rounded-lg p-2.5">
+          <div class="flex items-start gap-2 bg-[color-mix(in_srgb,var(--cc-bg)_60%,transparent)] border border-[var(--cc-border)] rounded-lg p-2.5">
             <span class="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black text-white flex-none mt-0.5" :class="avatarColor(entry.actor)" x-text="initials(entry.actor)"></span>
-            <p class="text-xs text-slate-300 leading-snug">
+            <p class="text-xs text-[var(--cc-text-muted)] leading-snug">
               <span class="font-bold text-slate-100" x-text="entry.actor"></span>
               <span x-text="' ' + entry.action"></span>
-              <span class="block text-[10px] text-slate-500 mt-0.5" x-text="relativeTime(entry.ts)"></span>
+              <span class="block text-[10px] text-[var(--cc-text-muted)] mt-0.5" x-text="relativeTime(entry.ts)"></span>
             </p>
           </div>
         </template>
@@ -724,13 +923,13 @@
   </div>
 
   <!-- SPENDING BREAKDOWN MODAL -->
-  <div x-show="showBreakdown" x-cloak class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-transition>
-    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl max-w-md w-full shadow-2xl max-h-[80vh] flex flex-col">
+  <div x-show="showBreakdown" x-cloak class="fixed inset-0 bg-[color-mix(in_srgb,var(--cc-bg)_80%,transparent)] backdrop-blur-sm z-50 flex items-center justify-center p-4" x-transition>
+    <div class="bg-[var(--cc-surface)] border border-[var(--cc-border)] p-5 rounded-xl max-w-md w-full shadow-2xl max-h-[80vh] flex flex-col">
       <div class="flex items-center justify-between mb-3 flex-none">
-        <h3 class="text-sm font-bold text-white flex items-center gap-2">📊 Spending by Category</h3>
-        <button @click="showBreakdown = false" class="text-slate-500 hover:text-white text-sm" aria-label="Close">✕</button>
+        <h3 class="text-sm font-bold text-[var(--cc-text)] flex items-center gap-2">📊 Spending by Category</h3>
+        <button @click="showBreakdown = false" class="text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] text-sm" aria-label="Close">✕</button>
       </div>
-      <p class="text-[10px] text-slate-500 mb-3 flex-none">Cleared withdrawals only, grouped by category.</p>
+      <p class="text-[10px] text-[var(--cc-text-muted)] mb-3 flex-none">Cleared withdrawals only, grouped by category.</p>
       <div class="overflow-y-auto space-y-2.5">
         <template x-if="getCategoryBreakdown().length === 0">
           <p class="text-center py-8 text-slate-600 text-xs italic">No cleared withdrawals yet.</p>
@@ -739,9 +938,9 @@
           <div>
             <div class="flex items-center justify-between text-xs mb-1">
               <span class="font-semibold px-1.5 py-0.5 rounded border" :class="categoryClass(c.cat)" x-text="c.cat"></span>
-              <span class="text-slate-300 font-bold" x-text="'$' + c.amt.toFixed(2) + ' · ' + c.pct.toFixed(0) + '%'"></span>
+              <span class="text-[var(--cc-text-muted)] font-bold" x-text="'$' + c.amt.toFixed(2) + ' · ' + c.pct.toFixed(0) + '%'"></span>
             </div>
-            <div class="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+            <div class="w-full h-2 bg-[var(--cc-bg)] rounded-full overflow-hidden border border-[var(--cc-border)]">
               <div class="h-full rounded-full transition-all" :class="categoryBarClass(c.cat)" :style="'width:' + c.pct + '%'"></div>
             </div>
           </div>
@@ -757,7 +956,7 @@
            x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150"
            x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
            class="pointer-events-auto max-w-xs px-3.5 py-2 rounded-xl shadow-2xl border text-xs font-semibold backdrop-blur-md flex items-center gap-3"
-           :class="t.tone === 'info' ? 'bg-slate-900/95 border-slate-700 text-slate-300' : 'bg-emerald-600/95 border-emerald-500 text-white'">
+           :class="t.tone === 'info' ? 'bg-[color-mix(in_srgb,var(--cc-surface)_95%,transparent)] border-[var(--cc-border)] text-[var(--cc-text-muted)]' : 'bg-emerald-600/95 border-emerald-500 text-white'">
         <span x-text="t.message"></span>
         <button x-show="t.hasUndo" @click="runUndo(t)" class="text-amber-300 hover:text-amber-200 font-bold underline flex-none">Undo</button>
       </div>
@@ -767,8 +966,8 @@
   <!-- APP STATE & FIREBASE ENGINE -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, onValue, set, get, push, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getDatabase, ref, onValue, set, update, get, push, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword, verifyBeforeUpdateEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import Alpine from "https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/module.esm.js";
 
     const firebaseConfig = {
@@ -812,7 +1011,7 @@
         myNameInput: '',
 
         showCreateClubForm: false,
-        newClubForm: { name: '', contactEmail: '' },
+        newClubForm: { name: '', contactEmail: '', theme: { primary: '#059669', accent: '#2563eb', highlight: '#f59e0b' } },
         clubFormError: '',
         creatingClub: false,
         joinSearch: '',
@@ -855,6 +1054,34 @@
         customRangeEnd: '',
         chartMeasuredWidth: 900,
 
+        // ---------- ACCOUNT MENU (avatar dropdown) ----------
+        showAccountMenu: false,
+        showChangeEmail: false,
+        changeEmailForm: { newEmail: '', currentPassword: '' },
+        changeEmailError: '',
+        changingEmail: false,
+        showChangePassword: false,
+        changePasswordForm: { currentPassword: '', newPassword: '', confirmPassword: '' },
+        changePasswordError: '',
+        changingPassword: false,
+
+        // ---------- HEADER "EYEBROW" FEEDBACK ----------
+        headerNotice: null, // { id, message }
+
+        // ---------- COLOR MODE (light/dark) ----------
+        colorMode: (function() { try { return localStorage.getItem('cc_colorMode') || 'dark'; } catch (e) { return 'dark'; } })(),
+
+        // ---------- TIMELINE DISPLAY MODE ----------
+        // 'chronological' shows every day in the range (even empty ones, so you can
+        // always drag onto any date); 'stacked' collapses empty days for a denser
+        // view. Persisted locally since it's a personal display preference.
+        timelineMode: (function() { try { return localStorage.getItem('cc_timelineMode') || 'chronological'; } catch (e) { return 'chronological'; } })(),
+        editingDateId: null, // id of the transaction card currently showing its inline date picker
+
+        // ---------- CLUB THEME (per-club accent colors) ----------
+        clubTheme: {},
+        clubThemeForm: { primary: '#059669', accent: '#2563eb', highlight: '#f59e0b' },
+
         transactions: [],
         roster: [],
 
@@ -871,9 +1098,21 @@
             }
           });
 
+          // Apply the persisted color mode immediately (and keep it applied —
+          // this drives the :root[data-theme="light"] CSS override).
+          document.documentElement.dataset.theme = this.colorMode;
+          this.$watch('colorMode', (val) => {
+            try { localStorage.setItem('cc_colorMode', val); } catch (e) {}
+            document.documentElement.dataset.theme = val;
+          });
+
           // Re-anchor the timeline to "Today" whenever the date range changes,
           // since switching ranges changes what's visible entirely.
           this.$watch('dateRangeMode', () => this.scrollTimelineToToday());
+          this.$watch('timelineMode', (val) => {
+            try { localStorage.setItem('cc_timelineMode', val); } catch (e) {}
+            this.scrollTimelineToToday();
+          });
 
           // Keep the balance graph's internal pixel geometry in sync with its
           // actual rendered width so it always fits without horizontal scrolling.
@@ -906,6 +1145,7 @@
         resetLocalState() {
           this.clubName = '';
           this.clubContactEmail = '';
+          this.clubTheme = {};
           this.startingBalance = 0;
           this.duesAmount = 50;
           this.transactions = [];
@@ -935,6 +1175,17 @@
           const id = this.newId();
           this.toasts.push({ id, message, tone });
           setTimeout(() => { this.toasts = this.toasts.filter(t => t.id !== id); }, 3200);
+          // Success confirmations also get a quiet flash in the header "eyebrow" —
+          // a more visible spot for "saved"/"synced" feedback than the corner toast.
+          if (tone === 'success') this.flashHeaderNotice(message);
+        },
+
+        flashHeaderNotice(message) {
+          const id = this.newId();
+          this.headerNotice = { id, message };
+          setTimeout(() => {
+            if (this.headerNotice && this.headerNotice.id === id) this.headerNotice = null;
+          }, 3000);
         },
 
         toastUndo(message, undoFn) {
@@ -1029,6 +1280,7 @@
             }
             this.clubName = data.name ?? '';
             this.clubContactEmail = data.contactEmail ?? '';
+            this.clubTheme = data.theme ?? {};
             const fd = data.financeData ?? {};
             this.startingBalance = fd.startingBalance ?? 0;
             this.duesAmount = fd.duesAmount ?? 50;
@@ -1156,12 +1408,69 @@
         async saveMyName() {
           const name = this.myNameInput.trim();
           if (!name || !this.user) { this.editingMyName = false; return; }
-          await set(ref(db, `users/${this.user.uid}/name`), name);
+          const updates = { [`users/${this.user.uid}/name`]: name };
           if (this.activeClubId && this.clubMembers[this.user.uid]) {
-            await set(ref(db, `clubs/${this.activeClubId}/members/${this.user.uid}/name`), name);
+            updates[`clubs/${this.activeClubId}/members/${this.user.uid}/name`] = name;
           }
-          this.editingMyName = false;
-          this.toast('Name updated');
+          try {
+            await update(ref(db), updates);
+            this.editingMyName = false;
+            this.toast('Name updated');
+          } catch (err) {
+            this.toast('Could not update your name — try again.', 'info');
+          }
+        },
+
+        openChangeEmail() {
+          this.changeEmailForm = { newEmail: '', currentPassword: '' };
+          this.changeEmailError = '';
+          this.showChangeEmail = true;
+          this.showAccountMenu = false;
+        },
+
+        async submitChangeEmail() {
+          this.changeEmailError = '';
+          const { newEmail, currentPassword } = this.changeEmailForm;
+          if (!newEmail || !currentPassword) { this.changeEmailError = 'Fill in all fields.'; return; }
+          this.changingEmail = true;
+          try {
+            const cred = EmailAuthProvider.credential(this.user.email, currentPassword);
+            await reauthenticateWithCredential(auth.currentUser, cred);
+            await verifyBeforeUpdateEmail(auth.currentUser, newEmail);
+            this.showChangeEmail = false;
+            this.toast(`Verification link sent to ${newEmail} — confirm it there to finish changing your email`, 'info');
+          } catch (err) {
+            this.changeEmailError = err.code === 'auth/wrong-password' ? 'Current password is incorrect.'
+              : err.code === 'auth/email-already-in-use' ? 'That email is already in use by another account.'
+              : this.authErrorMessage(err);
+          }
+          this.changingEmail = false;
+        },
+
+        openChangePassword() {
+          this.changePasswordForm = { currentPassword: '', newPassword: '', confirmPassword: '' };
+          this.changePasswordError = '';
+          this.showChangePassword = true;
+          this.showAccountMenu = false;
+        },
+
+        async submitChangePassword() {
+          this.changePasswordError = '';
+          const { currentPassword, newPassword, confirmPassword } = this.changePasswordForm;
+          if (!currentPassword || !newPassword) { this.changePasswordError = 'Fill in all fields.'; return; }
+          if (newPassword.length < 6) { this.changePasswordError = 'New password must be at least 6 characters.'; return; }
+          if (newPassword !== confirmPassword) { this.changePasswordError = 'New passwords do not match.'; return; }
+          this.changingPassword = true;
+          try {
+            const cred = EmailAuthProvider.credential(this.user.email, currentPassword);
+            await reauthenticateWithCredential(auth.currentUser, cred);
+            await updatePassword(auth.currentUser, newPassword);
+            this.showChangePassword = false;
+            this.toast('Password updated');
+          } catch (err) {
+            this.changePasswordError = err.code === 'auth/wrong-password' ? 'Current password is incorrect.' : this.authErrorMessage(err);
+          }
+          this.changingPassword = false;
         },
 
         // ---------- CLUB CREATE / JOIN ----------
@@ -1170,29 +1479,31 @@
           if (!this.newClubForm.name.trim()) { this.clubFormError = 'Please enter a club name.'; return; }
           this.creatingClub = true;
           try {
-            const clubRef = push(ref(db, 'clubs'));
-            const clubId = clubRef.key;
-            await set(clubRef, {
-              name: this.newClubForm.name.trim(),
-              contactEmail: this.newClubForm.contactEmail.trim(),
-              createdBy: this.user.uid,
-              createdAt: new Date().toISOString(),
-              members: { [this.user.uid]: { role: 'admin', email: this.user.email, name: this.user.name || this.user.email } },
-              financeData: {
-                startingBalance: 0,
-                duesAmount: 50,
-                transactions: [],
-                roster: [{ id: this.newId(), name: this.user.name || this.user.email, role: 'Admin', notes: '', duesPaid: false }]
-              }
+            const clubId = push(ref(db, 'clubs')).key;
+            const clubName = this.newClubForm.name.trim();
+            await update(ref(db), {
+              [`clubs/${clubId}`]: {
+                name: clubName,
+                contactEmail: this.newClubForm.contactEmail.trim(),
+                theme: { ...this.newClubForm.theme },
+                createdBy: this.user.uid,
+                createdAt: new Date().toISOString(),
+                members: { [this.user.uid]: { role: 'admin', email: this.user.email, name: this.user.name || this.user.email } },
+                financeData: {
+                  startingBalance: 0,
+                  duesAmount: 50,
+                  transactions: [],
+                  roster: [{ id: this.newId(), name: this.user.name || this.user.email, role: 'Admin', notes: '', duesPaid: false }]
+                }
+              },
+              [`clubDirectory/${clubId}`]: { name: clubName },
+              [`users/${this.user.uid}/clubs/${clubId}`]: 'admin'
             });
-            await set(ref(db, `clubDirectory/${clubId}`), { name: this.newClubForm.name.trim() });
-            await set(ref(db, `users/${this.user.uid}/clubs/${clubId}`), 'admin');
-            this.clubDirectoryCache = { ...this.clubDirectoryCache, [clubId]: this.newClubForm.name.trim() };
-            const createdName = this.newClubForm.name.trim();
-            this.newClubForm = { name: '', contactEmail: '' };
+            this.clubDirectoryCache = { ...this.clubDirectoryCache, [clubId]: clubName };
+            this.newClubForm = { name: '', contactEmail: '', theme: { primary: '#059669', accent: '#2563eb', highlight: '#f59e0b' } };
             this.showCreateClubForm = false;
             this.enterClub(clubId);
-            this.toast(`${createdName} created — you're the Admin`);
+            this.toast(`${clubName} created — you're the Admin`);
             this.logActivity('created the club');
           } catch (err) {
             this.clubFormError = this.authErrorMessage(err);
@@ -1215,60 +1526,90 @@
 
         async requestToJoin(clubId, clubName) {
           if (this.myClubs[clubId] || this.pendingRequests[clubId]) return;
-          await set(ref(db, `clubs/${clubId}/joinRequests/${this.user.uid}`), { email: this.user.email, name: this.user.name || this.user.email, requestedAt: new Date().toISOString() });
-          await set(ref(db, `users/${this.user.uid}/pendingRequests/${clubId}`), clubName);
-          this.toast(`Request sent to ${clubName}`);
+          try {
+            await update(ref(db), {
+              [`clubs/${clubId}/joinRequests/${this.user.uid}`]: { email: this.user.email, name: this.user.name || this.user.email, requestedAt: new Date().toISOString() },
+              [`users/${this.user.uid}/pendingRequests/${clubId}`]: clubName
+            });
+            this.toast(`Request sent to ${clubName}`);
+          } catch (err) {
+            this.toast('Could not send that request — try again.', 'info');
+          }
         },
 
         async cancelRequest(clubId) {
-          await set(ref(db, `clubs/${clubId}/joinRequests/${this.user.uid}`), null);
-          await set(ref(db, `users/${this.user.uid}/pendingRequests/${clubId}`), null);
-          this.toast('Request cancelled', 'info');
+          try {
+            await update(ref(db), {
+              [`clubs/${clubId}/joinRequests/${this.user.uid}`]: null,
+              [`users/${this.user.uid}/pendingRequests/${clubId}`]: null
+            });
+            this.toast('Request cancelled', 'info');
+          } catch (err) {
+            this.toast('Could not cancel that request — try again.', 'info');
+          }
         },
 
         async approveRequest(uid, email, name) {
           if (!this.can('officer')) return;
           const clubId = this.activeClubId;
           const displayName = name || email;
-          await set(ref(db, `clubs/${clubId}/members/${uid}`), { role: 'viewer', email, name: displayName });
-          await set(ref(db, `users/${uid}/clubs/${clubId}`), 'viewer');
-          await set(ref(db, `clubs/${clubId}/joinRequests/${uid}`), null);
-          await set(ref(db, `users/${uid}/pendingRequests/${clubId}`), null);
-          if (!this.roster.some(m => m.name === displayName)) {
-            this.roster.push({ id: this.newId(), name: displayName, role: 'Viewer', notes: '', duesPaid: false });
-            this.syncToFirebase();
+          try {
+            await update(ref(db), {
+              [`clubs/${clubId}/members/${uid}`]: { role: 'viewer', email, name: displayName },
+              [`users/${uid}/clubs/${clubId}`]: 'viewer',
+              [`clubs/${clubId}/joinRequests/${uid}`]: null,
+              [`users/${uid}/pendingRequests/${clubId}`]: null
+            });
+            if (!this.roster.some(m => m.name === displayName)) {
+              this.roster.push({ id: this.newId(), name: displayName, role: 'Viewer', notes: '', duesPaid: false });
+              this.syncToFirebase();
+            }
+            this.logActivity(`approved ${displayName} as Viewer`);
+            this.toast(`${displayName} approved as Viewer`);
+          } catch (err) {
+            this.toast('Could not approve that request — try again.', 'info');
           }
-          this.logActivity(`approved ${displayName} as Viewer`);
-          this.toast(`${displayName} approved as Viewer`);
         },
 
         async denyRequest(uid, email, name) {
           if (!this.can('officer')) return;
           const clubId = this.activeClubId;
-          await set(ref(db, `clubs/${clubId}/joinRequests/${uid}`), null);
-          await set(ref(db, `users/${uid}/pendingRequests/${clubId}`), null);
-          this.logActivity(`denied a request from ${name || email || 'someone'}`);
-          this.toast('Request denied', 'info');
+          try {
+            await update(ref(db), {
+              [`clubs/${clubId}/joinRequests/${uid}`]: null,
+              [`users/${uid}/pendingRequests/${clubId}`]: null
+            });
+            this.logActivity(`denied a request from ${name || email || 'someone'}`);
+            this.toast('Request denied', 'info');
+          } catch (err) {
+            this.toast('Could not deny that request — try again.', 'info');
+          }
         },
 
         adminCount() {
           return Object.values(this.clubMembers).filter(m => m.role === 'admin').length;
         },
 
-        setMemberRole(uid, role) {
+        async setMemberRole(uid, role) {
           if (!this.can('admin')) return;
           const current = this.clubMembers[uid];
           if (current?.role === 'admin' && role !== 'admin' && this.adminCount() <= 1) {
             alert('A club must have at least one Admin. Promote someone else first.');
             return;
           }
-          set(ref(db, `clubs/${this.activeClubId}/members/${uid}/role`), role);
-          set(ref(db, `users/${uid}/clubs/${this.activeClubId}`), role);
-          this.logActivity(`changed ${current?.name || current?.email || 'a member'}'s role to ${role}`);
-          this.toast(`${current?.name || current?.email || 'Member'} is now ${role}`);
+          try {
+            await update(ref(db), {
+              [`clubs/${this.activeClubId}/members/${uid}/role`]: role,
+              [`users/${uid}/clubs/${this.activeClubId}`]: role
+            });
+            this.logActivity(`changed ${current?.name || current?.email || 'a member'}'s role to ${role}`);
+            this.toast(`${current?.name || current?.email || 'Member'} is now ${role}`);
+          } catch (err) {
+            this.toast('Could not update that member\'s role — try again.', 'info');
+          }
         },
 
-        removeClubMember(uid) {
+        async removeClubMember(uid) {
           if (!this.can('admin')) return;
           const m = this.clubMembers[uid];
           if (m?.role === 'admin' && this.adminCount() <= 1) {
@@ -1276,10 +1617,16 @@
             return;
           }
           if (!confirm(`Remove ${m?.name || m?.email || 'this member'} from the club?`)) return;
-          set(ref(db, `clubs/${this.activeClubId}/members/${uid}`), null);
-          set(ref(db, `users/${uid}/clubs/${this.activeClubId}`), null);
-          this.logActivity(`removed ${m?.name || m?.email || 'a member'} from the club`);
-          this.toast(`${m?.name || m?.email || 'Member'} removed`, 'info');
+          try {
+            await update(ref(db), {
+              [`clubs/${this.activeClubId}/members/${uid}`]: null,
+              [`users/${uid}/clubs/${this.activeClubId}`]: null
+            });
+            this.logActivity(`removed ${m?.name || m?.email || 'a member'} from the club`);
+            this.toast(`${m?.name || m?.email || 'Member'} removed`, 'info');
+          } catch (err) {
+            this.toast('Could not remove that member — try again.', 'info');
+          }
         },
 
         async leaveClubMembership() {
@@ -1291,16 +1638,31 @@
           if (!confirm(`Leave ${this.clubName}? You'll need to be re-approved to rejoin.`)) return;
           const clubId = this.activeClubId;
           this.logActivity('left the club');
-          await set(ref(db, `clubs/${clubId}/members/${this.user.uid}`), null);
-          await set(ref(db, `users/${this.user.uid}/clubs/${clubId}`), null);
-          this.leaveClub();
-          this.toast('You left the club', 'info');
+          try {
+            await update(ref(db), {
+              [`clubs/${clubId}/members/${this.user.uid}`]: null,
+              [`users/${this.user.uid}/clubs/${clubId}`]: null
+            });
+            this.leaveClub();
+            this.toast('You left the club', 'info');
+          } catch (err) {
+            this.toast('Could not leave the club — try again.', 'info');
+          }
         },
 
         openClubSettings() {
           if (!this.can('admin')) return;
           this.clubSettingsForm = { name: this.clubName, contactEmail: this.clubContactEmail };
+          this.clubThemeForm = {
+            primary: this.clubTheme.primary || '#059669',
+            accent: this.clubTheme.accent || '#2563eb',
+            highlight: this.clubTheme.highlight || '#f59e0b'
+          };
           this.showClubSettings = true;
+        },
+
+        resetClubTheme() {
+          this.clubThemeForm = { primary: '#059669', accent: '#2563eb', highlight: '#f59e0b' };
         },
 
         async saveClubSettings() {
@@ -1308,13 +1670,20 @@
           const name = this.clubSettingsForm.name.trim();
           if (!name) return;
           const contactEmail = this.clubSettingsForm.contactEmail.trim();
-          await set(ref(db, `clubs/${this.activeClubId}/name`), name);
-          await set(ref(db, `clubs/${this.activeClubId}/contactEmail`), contactEmail);
-          await set(ref(db, `clubDirectory/${this.activeClubId}/name`), name);
-          this.clubDirectoryCache = { ...this.clubDirectoryCache, [this.activeClubId]: name };
-          this.showClubSettings = false;
-          this.logActivity('updated club settings');
-          this.toast('Club settings saved');
+          try {
+            await update(ref(db), {
+              [`clubs/${this.activeClubId}/name`]: name,
+              [`clubs/${this.activeClubId}/contactEmail`]: contactEmail,
+              [`clubs/${this.activeClubId}/theme`]: { ...this.clubThemeForm },
+              [`clubDirectory/${this.activeClubId}/name`]: name
+            });
+            this.clubDirectoryCache = { ...this.clubDirectoryCache, [this.activeClubId]: name };
+            this.showClubSettings = false;
+            this.logActivity('updated club settings');
+            this.toast('Club settings saved');
+          } catch (err) {
+            this.toast('Could not save club settings — try again.', 'info');
+          }
         },
 
         async deleteClub() {
@@ -1325,12 +1694,16 @@
           const clubId = this.activeClubId;
           const deletedName = this.clubName || 'Club';
           const memberUids = Object.keys(this.clubMembers);
-          await Promise.all(memberUids.map(uid => set(ref(db, `users/${uid}/clubs/${clubId}`), null)));
-          await set(ref(db, `clubDirectory/${clubId}`), null);
-          await set(ref(db, `clubs/${clubId}`), null);
-          this.showClubSettings = false;
-          this.leaveClub();
-          this.toast(`${deletedName} deleted`, 'info');
+          try {
+            const updates = { [`clubDirectory/${clubId}`]: null, [`clubs/${clubId}`]: null };
+            memberUids.forEach(uid => { updates[`users/${uid}/clubs/${clubId}`] = null; });
+            await update(ref(db), updates);
+            this.showClubSettings = false;
+            this.leaveClub();
+            this.toast(`${deletedName} deleted`, 'info');
+          } catch (err) {
+            this.toast('Could not delete the club — try again.', 'info');
+          }
         },
 
         toggleEditStarting() {
@@ -1359,7 +1732,7 @@
             'Events': 'bg-pink-500/10 text-pink-400 border-pink-500/30',
             'Equipment': 'bg-amber-500/10 text-amber-400 border-amber-500/30',
             'Travel': 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30',
-            'Other': 'bg-slate-500/10 text-slate-400 border-slate-500/30'
+            'Other': 'bg-slate-500/10 text-[var(--cc-text-muted)] border-slate-500/30'
           };
           return map[cat] || map['Other'];
         },
@@ -1421,7 +1794,7 @@
           // both need a row to drop onto). Skip this for very long ranges ("All
           // Time" etc.) so the list doesn't balloon into hundreds of empty rows.
           const windowDays = this.getGraphWindowDays();
-          const useEveryDay = windowDays.length > 0 && windowDays.length <= 120;
+          const useEveryDay = this.timelineMode === 'chronological' && windowDays.length > 0 && windowDays.length <= 120;
           const allDates = new Set([...(useEveryDay ? windowDays : []), ...Object.keys(groups)]);
           const sortedDates = Array.from(allDates).sort();
 
@@ -1716,6 +2089,45 @@
           return path;
         },
 
+        // The cleared (past/today) portion of the line is colored by whether the
+        // balance is actually positive or negative at each point — green when in
+        // the black, red when in the red — regardless of club theme. Returns one
+        // short segment per day-to-day step so each can carry its own color.
+        getClearedSegments() {
+          const dailyData = this.getCalculatedGraphData();
+          if (dailyData.length === 0) return [];
+          const dims = this.getChartDims();
+          const balances = dailyData.map(d => d.balance);
+          const base = Number(this.startingBalance) || 0;
+          const minBal = Math.min(...balances, base, 0);
+          const maxBal = Math.max(...balances, base, 100);
+          const balRange = maxBal - minBal || 1;
+          const n = dailyData.length;
+          const span = n - 1 || 1;
+
+          const coords = dailyData.map((d, idx) => ({
+            x: dims.paddingLeft + (idx / span) * dims.usableWidth,
+            y: dims.height - dims.paddingBottom - ((d.balance - minBal) / balRange) * dims.usableHeight,
+            balance: d.balance
+          }));
+
+          const todayIdx = this.getTodayDayIndex();
+          let clearedCoords;
+          if (todayIdx === -1) {
+            const allPast = dailyData[dailyData.length - 1].date < this.todayStr;
+            clearedCoords = allPast ? coords : [];
+          } else {
+            clearedCoords = coords.slice(0, todayIdx + 1);
+          }
+
+          const segments = [];
+          for (let i = 1; i < clearedCoords.length; i++) {
+            const a = clearedCoords[i - 1], b = clearedCoords[i];
+            segments.push({ d: `M ${a.x} ${a.y} L ${b.x} ${b.y}`, color: b.balance < 0 ? '#f87171' : '#34d399' });
+          }
+          return segments;
+        },
+
         renderChartSvg() {
           const dims = this.getChartDims();
           const yTicks = this.getYScales();
@@ -1727,19 +2139,29 @@
           // viewBox matches the wrapper's real rendered pixel size exactly, so no
           // non-uniform scaling is ever applied (that mismatch used to distort the
           // line and text into a "stretched" look).
+          // The fill tint follows the current balance's sign — it's a backdrop for
+          // the (separately colored) line, not a club-theme surface.
+          const fillColor = this.getCurrentBalance() < 0 ? '#f87171' : '#34d399';
+          // The chart is plain SVG with hardcoded colors — it can't see the CSS
+          // theme variables, so its neutral ink has to branch on colorMode directly.
+          const isLight = this.colorMode === 'light';
+          const axisColor = isLight ? '#94a3b8' : '#475569';
+          const gridColor = isLight ? '#e2e8f0' : '#1e293b';
+          const tickColor = isLight ? '#64748b' : '#94a3b8';
+          const labelColor = isLight ? '#334155' : '#cbd5e1';
           let svg = `<svg viewBox="0 0 ${dims.width} ${dims.height}" class="w-full h-full overflow-visible">`;
           svg += `<defs><linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="#10b981" stop-opacity="0.25"/>
-                    <stop offset="100%" stop-color="#10b981" stop-opacity="0.0"/>
+                    <stop offset="0%" stop-color="${fillColor}" stop-opacity="0.25"/>
+                    <stop offset="100%" stop-color="${fillColor}" stop-opacity="0.0"/>
                   </linearGradient></defs>`;
 
-          svg += `<line x1="${axisLeft}" y1="${axisTop}" x2="${axisLeft}" y2="${axisBottom}" stroke="#475569" stroke-width="1.5" />`;
-          svg += `<line x1="${axisLeft}" y1="${axisBottom}" x2="${axisRight}" y2="${axisBottom}" stroke="#475569" stroke-width="1.5" />`;
+          svg += `<line x1="${axisLeft}" y1="${axisTop}" x2="${axisLeft}" y2="${axisBottom}" stroke="${axisColor}" stroke-width="1.5" />`;
+          svg += `<line x1="${axisLeft}" y1="${axisBottom}" x2="${axisRight}" y2="${axisBottom}" stroke="${axisColor}" stroke-width="1.5" />`;
 
           yTicks.forEach(t => {
-            svg += `<line x1="${axisLeft}" y1="${t.y}" x2="${axisRight}" y2="${t.y}" stroke="#1e293b" stroke-dasharray="3 3" />`;
-            svg += `<line x1="${axisLeft - 4}" y1="${t.y}" x2="${axisLeft}" y2="${t.y}" stroke="#94a3b8" stroke-width="1" />`;
-            svg += `<text x="${axisLeft - 8}" y="${t.y + 3}" fill="#cbd5e1" font-size="9" text-anchor="end" font-weight="700">$${this.formatCompactCurrency(t.val)}</text>`;
+            svg += `<line x1="${axisLeft}" y1="${t.y}" x2="${axisRight}" y2="${t.y}" stroke="${gridColor}" stroke-dasharray="3 3" />`;
+            svg += `<line x1="${axisLeft - 4}" y1="${t.y}" x2="${axisLeft}" y2="${t.y}" stroke="${tickColor}" stroke-width="1" />`;
+            svg += `<text x="${axisLeft - 8}" y="${t.y + 3}" fill="${labelColor}" font-size="9" text-anchor="end" font-weight="700">$${this.formatCompactCurrency(t.val)}</text>`;
           });
 
           // Thin out date labels (never the tick marks) once the range holds more
@@ -1748,18 +2170,20 @@
           const labelStep = Math.max(1, Math.ceil(xTicks.length / Math.max(3, Math.floor(dims.usableWidth / 42))));
           const lastIdx = xTicks.length - 1;
           xTicks.forEach((t, i) => {
-            svg += `<line x1="${t.x}" y1="${axisBottom}" x2="${t.x}" y2="${axisBottom + 4}" stroke="#94a3b8" stroke-width="1" />`;
+            svg += `<line x1="${t.x}" y1="${axisBottom}" x2="${t.x}" y2="${axisBottom + 4}" stroke="${tickColor}" stroke-width="1" />`;
             const isLast = i === lastIdx;
             // Suppress a "regular" label if it would land right next to the
             // always-shown final one and visually collide with it.
             const tooCloseToLast = !isLast && lastIdx - i < labelStep;
             if ((i % labelStep === 0 && !tooCloseToLast) || isLast) {
-              svg += `<text x="${t.x}" y="${axisBottom + 14}" fill="#cbd5e1" font-size="9" font-weight="700" text-anchor="middle">${t.dateStr}</text>`;
+              svg += `<text x="${t.x}" y="${axisBottom + 14}" fill="${labelColor}" font-size="9" font-weight="700" text-anchor="middle">${t.dateStr}</text>`;
             }
           });
 
           svg += `<path d="${this.generateGraphAreaPath()}" fill="url(#chartGradient)" />`;
-          svg += `<path d="${this.generateGraphPath('cleared')}" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />`;
+          this.getClearedSegments().forEach(seg => {
+            svg += `<path d="${seg.d}" fill="none" stroke="${seg.color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />`;
+          });
           svg += `<path d="${this.generateGraphPath('upcoming')}" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round" />`;
 
           if (todayX !== null) {
