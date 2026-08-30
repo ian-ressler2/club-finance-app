@@ -373,7 +373,7 @@
             </button>
           </div>
           <template x-if="!editingStarting">
-            <p class="text-xl font-black text-[var(--cc-text)] mt-0.5" x-text="'$' + Number(startingBalance).toFixed(2)"></p>
+            <p class="text-base font-black text-[var(--cc-text-muted)] mt-0.5" x-text="'$' + Number(startingBalance).toFixed(2)"></p>
           </template>
           <template x-if="editingStarting && can('admin')">
             <div class="flex items-center gap-2 mt-1">
@@ -386,7 +386,7 @@
         <div class="grid grid-cols-3 gap-2">
           <div class="bg-[color-mix(in_srgb,var(--cc-surface)_60%,transparent)] border border-[var(--cc-border)] rounded-xl p-2.5 shadow-lg border-l-2 border-l-emerald-500 hover:bg-[var(--cc-surface)] hover:scale-[1.03] hover:shadow-xl transition cursor-default" title="Vault balance including only cleared (past/today) transactions">
             <p class="text-[9px] font-bold uppercase text-[var(--cc-text-muted)]">Current Vault</p>
-            <p class="text-base font-black text-[var(--cc-text)] mt-0.5" x-text="'$' + getCurrentBalance().toFixed(2)"></p>
+            <p class="text-xl font-black text-[var(--cc-text)] mt-0.5" x-text="'$' + getCurrentBalance().toFixed(2)"></p>
           </div>
           <div class="bg-[color-mix(in_srgb,var(--cc-surface)_60%,transparent)] border border-[var(--cc-border)] rounded-xl p-2.5 shadow-lg border-l-2 border-l-blue-500 hover:bg-[var(--cc-surface)] hover:scale-[1.03] hover:shadow-xl transition cursor-default" title="Sum of all cleared deposits">
             <p class="text-[9px] font-bold uppercase text-[var(--cc-text-muted)]">Total Cleared</p>
@@ -651,21 +651,24 @@
           </template>
 
           <template x-for="member in roster" :key="member.id">
-            <div class="bg-[color-mix(in_srgb,var(--cc-bg)_70%,transparent)] border border-[var(--cc-border)] hover:border-[var(--cc-border)] hover:bg-[color-mix(in_srgb,var(--cc-surface)_70%,transparent)] p-2.5 rounded-lg transition">
+            <div @click="openMemberLedger(member.id)" class="cursor-pointer bg-[color-mix(in_srgb,var(--cc-bg)_70%,transparent)] border border-[var(--cc-border)] hover:border-[var(--cc-border)] hover:bg-[color-mix(in_srgb,var(--cc-surface)_70%,transparent)] p-2.5 rounded-lg transition">
               <div class="flex items-center justify-between gap-2">
                 <div class="flex items-center gap-2 min-w-0">
                   <span class="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black text-white flex-none" :class="avatarColor(member.name)" x-text="initials(member.name)"></span>
                   <div class="min-w-0">
-                    <p class="text-xs font-bold text-[var(--cc-text-muted)] truncate" x-text="member.name"></p>
+                    <div class="flex items-center gap-1.5">
+                      <p class="text-xs font-bold text-[var(--cc-text-muted)] truncate" x-text="member.name"></p>
+                      <span x-show="getMemberBalance(member) !== 0" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-none" :class="getMemberBalance(member) < 0 ? 'bg-rose-500/10 text-rose-400' : 'bg-emerald-500/10 text-emerald-400'" x-text="(getMemberBalance(member) < 0 ? '-$' : '+$') + Math.abs(getMemberBalance(member)).toFixed(2)"></span>
+                    </div>
                     <p class="text-[9px] text-[var(--cc-text-muted)] truncate" x-show="member.notes" x-text="member.notes"></p>
                   </div>
                 </div>
                 <div class="flex items-center gap-2 flex-none">
-                  <button :disabled="!can('officer')" @click="toggleDues(member.id)"
+                  <button :disabled="!can('officer')" @click.stop="toggleDues(member.id)"
                           class="text-[9px] font-bold px-2 py-0.5 rounded transition border"
                           :class="member.duesPaid ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border-rose-500/30'"
                           x-text="member.duesPaid ? 'Paid ✓' : 'Unpaid !'"></button>
-                  <button x-show="can('admin')" @click="removeMember(member.id)" class="text-slate-600 hover:text-rose-400 text-xs" aria-label="Remove from roster">✕</button>
+                  <button x-show="can('admin')" @click.stop="removeMember(member.id)" class="text-slate-600 hover:text-rose-400 text-xs" aria-label="Remove from roster">✕</button>
                 </div>
               </div>
               <div class="mt-1.5 flex items-center gap-2">
@@ -939,6 +942,84 @@
     </div>
   </div>
 
+  <!-- MEMBER LEDGER MODAL — individual charges/credits, separate from dues -->
+  <div x-show="showMemberLedger" x-cloak class="fixed inset-0 bg-[color-mix(in_srgb,var(--cc-bg)_80%,transparent)] backdrop-blur-sm z-50 flex items-center justify-center p-4" x-transition>
+    <template x-if="getLedgerMember()">
+      <div class="bg-[var(--cc-surface)] border border-[var(--cc-border)] rounded-xl shadow-2xl w-[90vw] max-w-md max-h-[85vh] flex flex-col">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-[var(--cc-border)] flex-none">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black text-white flex-none" :class="avatarColor(getLedgerMember().name)" x-text="initials(getLedgerMember().name)"></span>
+            <div class="min-w-0">
+              <h3 class="text-sm font-bold text-[var(--cc-text)] truncate" x-text="getLedgerMember().name"></h3>
+              <p class="text-[10px] text-[var(--cc-text-muted)]">Individual ledger — separate from dues</p>
+            </div>
+          </div>
+          <button @click="showMemberLedger = false" class="text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] text-lg leading-none flex-none" aria-label="Close">✕</button>
+        </div>
+
+        <!-- net balance summary -->
+        <div class="px-5 py-3 border-b border-[var(--cc-border)] flex-none text-center">
+          <template x-if="getMemberBalance(getLedgerMember()) === 0">
+            <p class="text-sm font-bold text-[var(--cc-text-muted)]">Settled up — no balance either way</p>
+          </template>
+          <template x-if="getMemberBalance(getLedgerMember()) !== 0">
+            <div>
+              <p class="text-2xl font-black" :class="getMemberBalance(getLedgerMember()) < 0 ? 'text-rose-400' : 'text-emerald-400'" x-text="(getMemberBalance(getLedgerMember()) < 0 ? '-$' : '+$') + Math.abs(getMemberBalance(getLedgerMember())).toFixed(2)"></p>
+              <p class="text-[10px] text-[var(--cc-text-muted)]" x-text="getMemberBalance(getLedgerMember()) < 0 ? 'Owes the club, net' : 'Club owes them, net'"></p>
+            </div>
+          </template>
+        </div>
+
+        <!-- drill-down list -->
+        <div class="flex-1 min-h-0 overflow-y-auto px-5 py-3 space-y-2">
+          <template x-if="(getLedgerMember().charges || []).length === 0">
+            <p class="text-center py-6 text-[11px] italic text-[var(--cc-text-muted)]">No individual charges or credits yet.</p>
+          </template>
+          <template x-for="charge in (getLedgerMember().charges || []).slice().sort((a, b) => a.date < b.date ? 1 : -1)" :key="charge.id">
+            <div class="flex items-center justify-between gap-2 bg-[color-mix(in_srgb,var(--cc-bg)_70%,transparent)] border border-[var(--cc-border)] rounded-lg px-3 py-2" :class="charge.settled ? 'opacity-60' : ''">
+              <div class="min-w-0">
+                <p class="text-xs font-bold text-[var(--cc-text)] truncate" :class="charge.settled ? 'line-through' : ''" x-text="charge.label"></p>
+                <p class="text-[9px] text-[var(--cc-text-muted)]" x-text="formatDate(charge.date) + (charge.notes ? ' · ' + charge.notes : '')"></p>
+              </div>
+              <div class="flex items-center gap-2 flex-none">
+                <span class="text-xs font-bold font-mono" :class="charge.amount < 0 ? 'text-rose-400' : 'text-emerald-400'" x-text="(charge.amount < 0 ? '-$' : '+$') + Math.abs(charge.amount).toFixed(2)"></span>
+                <button :disabled="!can('officer')" @click="toggleChargeSettled(charge.id)"
+                        class="text-[9px] font-bold px-2 py-0.5 rounded transition border flex-none"
+                        :class="charge.settled ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-[var(--cc-chip)] text-[var(--cc-text-muted)] border-[var(--cc-border)]'"
+                        :title="charge.settled ? 'Settled — recorded as a transaction. Click to undo.' : 'Mark settled — records this as a real transaction'"
+                        x-text="charge.settled ? 'Settled ✓' : 'Settle'"></button>
+                <button x-show="can('officer')" @click="removeMemberCharge(charge.id)" class="text-slate-600 hover:text-rose-400 text-xs" aria-label="Remove entry">✕</button>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- add new charge/credit (officer+) -->
+        <div x-show="can('officer')" class="px-5 py-4 border-t border-[var(--cc-border)] flex-none space-y-2">
+          <div class="flex gap-1.5">
+            <button type="button" @click="newCharge.direction = 'owes'" :class="newCharge.direction === 'owes' ? 'bg-rose-600 text-white' : 'bg-[var(--cc-chip)] text-[var(--cc-text-muted)]'" class="flex-1 text-[10px] font-bold py-1.5 rounded-lg transition">They Owe The Club</button>
+            <button type="button" @click="newCharge.direction = 'credit'" :class="newCharge.direction === 'credit' ? 'bg-emerald-600 text-white' : 'bg-[var(--cc-chip)] text-[var(--cc-text-muted)]'" class="flex-1 text-[10px] font-bold py-1.5 rounded-lg transition">Club Owes Them</button>
+          </div>
+          <form @submit.prevent="addMemberCharge()" class="grid grid-cols-2 gap-2">
+            <input type="text" x-model="newCharge.label" placeholder="e.g. Competition fee" class="col-span-2 bg-[var(--cc-bg)] border border-[var(--cc-border)] text-xs text-[var(--cc-text)] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500" required>
+            <input type="number" step="0.01" min="0" x-model="newCharge.amount" placeholder="Amount ($)" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-xs text-[var(--cc-text)] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500" required>
+            <select x-model="newCharge.category" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-xs text-[var(--cc-text)] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500">
+              <option value="Dues">Dues</option>
+              <option value="Fundraising">Fundraising</option>
+              <option value="Merchandise">Merchandise</option>
+              <option value="Events">Events</option>
+              <option value="Equipment">Equipment</option>
+              <option value="Travel">Travel</option>
+              <option value="Other">Other</option>
+            </select>
+            <input type="text" x-model="newCharge.notes" placeholder="Notes (optional)" class="col-span-2 bg-[var(--cc-bg)] border border-[var(--cc-border)] text-xs text-[var(--cc-text)] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500">
+            <button type="submit" class="col-span-2 bg-[var(--cc-primary)] hover:brightness-110 text-white text-xs font-bold py-1.5 rounded-lg transition">Add Entry</button>
+          </form>
+        </div>
+      </div>
+    </template>
+  </div>
+
   <!-- ACTIVITY LOG MODAL -->
   <div x-show="showActivityLog" x-cloak class="fixed inset-0 bg-[color-mix(in_srgb,var(--cc-bg)_80%,transparent)] backdrop-blur-sm z-50 flex items-center justify-center p-4" x-transition>
     <div class="bg-[var(--cc-surface)] border border-[var(--cc-border)] p-5 rounded-xl max-w-md w-full shadow-2xl max-h-[80vh] flex flex-col">
@@ -1099,6 +1180,12 @@
         editingStarting: false,
         duesAmount: 50.00,
         editingDues: false,
+
+        // ---------- MEMBER LEDGER (individual charges/credits, separate from dues) ----------
+        showMemberLedger: false,
+        ledgerMemberId: null,
+        newCharge: { label: '', amount: '', direction: 'owes', category: 'Other', notes: '' },
+
         showTxForm: false,
         showMemberForm: false,
         hoveredPoint: null,
@@ -1557,7 +1644,7 @@
                   startingBalance: 0,
                   duesAmount: 50,
                   transactions: [],
-                  roster: [{ id: this.newId(), name: this.user.name || this.user.email, role: 'Admin', notes: '', duesPaid: false }]
+                  roster: [{ id: this.newId(), name: this.user.name || this.user.email, role: 'Admin', notes: '', duesPaid: false, charges: [] }]
                 }
               },
               [`clubDirectory/${clubId}`]: { name: clubName },
@@ -1625,7 +1712,7 @@
               [`users/${uid}/pendingRequests/${clubId}`]: null
             });
             if (!this.roster.some(m => m.name === displayName)) {
-              this.roster.push({ id: this.newId(), name: displayName, role: 'Viewer', notes: '', duesPaid: false });
+              this.roster.push({ id: this.newId(), name: displayName, role: 'Viewer', notes: '', duesPaid: false, charges: [] });
               this.syncToFirebase();
             }
             this.logActivity(`approved ${displayName} as Viewer`);
@@ -2317,11 +2404,20 @@
             affectedMember = this.roster.find(m => m.id === tx.duesFor);
             if (affectedMember) affectedMember.duesPaid = false;
           }
+          let affectedCharge = null;
+          if (tx.memberChargeId) {
+            for (const m of this.roster) {
+              const c = (m.charges || []).find(c => c.id === tx.memberChargeId);
+              if (c) { affectedCharge = c; break; }
+            }
+            if (affectedCharge) affectedCharge.settled = false;
+          }
           this.syncToFirebase();
           this.logActivity(`deleted "${tx.source}" (${tx.type === 'deposit' ? '+' : '-'}$${Number(tx.amount).toFixed(2)})`);
           this.toastUndo(`Deleted "${tx.source}"`, () => {
             this.transactions.push(tx);
             if (affectedMember) affectedMember.duesPaid = true;
+            if (affectedCharge) affectedCharge.settled = true;
             this.syncToFirebase();
             this.logActivity(`undid the deletion of "${tx.source}"`);
           });
@@ -2343,7 +2439,8 @@
             name: this.newMember.name,
             role: this.newMember.role,
             notes: this.newMember.notes,
-            duesPaid: false
+            duesPaid: false,
+            charges: []
           });
           this.syncToFirebase();
           const addedName = this.newMember.name;
@@ -2410,6 +2507,90 @@
           this.syncToFirebase();
           this.logActivity(`marked ${m.name} dues ${m.duesPaid ? 'paid' : 'unpaid'}`);
           this.toast(`${m.name} marked ${m.duesPaid ? 'paid' : 'unpaid'}`);
+        },
+
+        // ---------- MEMBER LEDGER (individual charges/credits, separate from dues) ----------
+        // Each entry's amount is signed from the member's point of view: negative
+        // means the member owes the club, positive means the club owes the member.
+        openMemberLedger(memberId) {
+          this.ledgerMemberId = memberId;
+          this.newCharge = { label: '', amount: '', direction: 'owes', category: 'Other', notes: '' };
+          this.showMemberLedger = true;
+        },
+
+        getLedgerMember() {
+          return this.roster.find(m => m.id === this.ledgerMemberId) || null;
+        },
+
+        // Only unsettled entries count toward the "quick value" — once settled,
+        // the money's actually moved (recorded as a real transaction), so it's
+        // no longer an outstanding balance.
+        getMemberBalance(member) {
+          return (member.charges || []).filter(c => !c.settled).reduce((sum, c) => sum + Number(c.amount), 0);
+        },
+
+        addMemberCharge() {
+          const member = this.getLedgerMember();
+          if (!this.can('officer') || !member) return;
+          const label = this.newCharge.label.trim();
+          const rawAmount = Math.abs(Number(this.newCharge.amount));
+          if (!label || !rawAmount) return;
+          const signedAmount = this.newCharge.direction === 'owes' ? -rawAmount : rawAmount;
+          if (!member.charges) member.charges = [];
+          member.charges.push({
+            id: this.newId(),
+            label,
+            amount: signedAmount,
+            category: this.newCharge.category || 'Other',
+            notes: this.newCharge.notes.trim(),
+            date: this.todayStr,
+            settled: false
+          });
+          this.syncToFirebase();
+          this.logActivity(`added a ${this.newCharge.direction === 'owes' ? 'charge' : 'credit'} of $${rawAmount.toFixed(2)} for ${member.name}: ${label}`);
+          this.toast(`${label} added for ${member.name}`);
+          this.newCharge = { label: '', amount: '', direction: 'owes', category: 'Other', notes: '' };
+        },
+
+        // One click, same pattern as the dues Paid/Unpaid toggle: settling a charge
+        // both flips its state AND creates (or removes) the matching real
+        // transaction in the main ledger — a competition fee the member paid shows
+        // up as a deposit; a credit the club pays out shows up as a withdrawal.
+        toggleChargeSettled(chargeId) {
+          if (!this.can('officer')) return;
+          const member = this.getLedgerMember();
+          const charge = member && (member.charges || []).find(c => c.id === chargeId);
+          if (!charge) return;
+          charge.settled = !charge.settled;
+          if (charge.settled) {
+            this.transactions.push({
+              id: this.newId(),
+              source: `${charge.label} — ${member.name}`,
+              amount: Math.abs(charge.amount),
+              type: charge.amount < 0 ? 'deposit' : 'expense',
+              category: charge.category || 'Other',
+              date: this.todayStr,
+              notes: charge.notes || '',
+              memberChargeId: charge.id
+            });
+          } else {
+            this.transactions = this.transactions.filter(t => t.memberChargeId !== charge.id);
+          }
+          this.syncToFirebase();
+          this.logActivity(`marked "${charge.label}" for ${member.name} as ${charge.settled ? 'settled' : 'unsettled'}`);
+          this.toast(charge.settled ? `${charge.label} settled — added to transactions` : `${charge.label} marked unsettled`, charge.settled ? 'success' : 'info');
+        },
+
+        removeMemberCharge(chargeId) {
+          const member = this.getLedgerMember();
+          if (!this.can('officer') || !member) return;
+          const charge = (member.charges || []).find(c => c.id === chargeId);
+          if (!charge) return;
+          member.charges = (member.charges || []).filter(c => c.id !== chargeId);
+          if (charge.settled) this.transactions = this.transactions.filter(t => t.memberChargeId !== charge.id);
+          this.syncToFirebase();
+          this.logActivity(`removed "${charge.label}" from ${member.name}'s ledger`);
+          this.toast('Entry removed', 'info');
         }
       }
     }
