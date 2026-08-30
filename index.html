@@ -426,7 +426,7 @@
             <span class="flex items-center gap-1 text-emerald-400"><span class="w-2.5 h-0.5 bg-emerald-400 inline-block"></span> Cleared</span>
             <span class="flex items-center gap-1 text-[var(--cc-text-muted)]"><span class="w-2.5 h-0.5 border-b border-dashed border-slate-400 inline-block"></span> Scheduled</span>
             <span class="flex items-center gap-1 text-cyan-400"><span class="w-2.5 h-0.5 border-b border-dashed border-cyan-400 inline-block"></span> Today</span>
-            <select x-model="dateRangeMode" title="Date range — applies to graph & timeline" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-[10px] text-[var(--cc-text-muted)] rounded-lg px-1.5 py-0.5 focus:outline-none focus:border-emerald-500">
+            <select x-model="dateRangeMode" title="Date range for this graph only" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-[10px] text-[var(--cc-text-muted)] rounded-lg px-1.5 py-0.5 focus:outline-none focus:border-emerald-500">
               <option value="default">2wk Prior · 1wk Fwd</option>
               <option value="1m">1 Month</option>
               <option value="3m">3 Months</option>
@@ -440,6 +440,9 @@
                 <input type="date" x-model="customRangeEnd" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-[10px] text-[var(--cc-text)] rounded-lg px-1.5 py-0.5 focus:outline-none focus:border-emerald-500">
               </div>
             </template>
+            <button x-show="rangesDiffer()" @click="syncGraphToTimeline()" title="Match the timeline's date range" class="flex items-center gap-1 text-amber-400 hover:text-amber-300 font-semibold px-1.5 py-0.5 rounded-lg border border-amber-500/30 bg-amber-500/10 transition">
+              🔄 <span class="hidden lg:inline">Sync from timeline</span>
+            </button>
           </div>
         </div>
 
@@ -479,14 +482,24 @@
             <h2 class="text-xs font-bold text-[var(--cc-text)] flex items-center gap-2">⚖️ Vertical Timeline (Drag cards to a new date row)</h2>
             <p class="text-[10px] text-[var(--cc-text-muted)]">Left = Deposits · Right = Withdrawals · Drop on a row's side to move date &amp; type</p>
           </div>
-          <div class="flex items-center gap-2 flex-none">
-            <select x-model="dateRangeMode" title="Date range — applies to graph & timeline" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-[10px] text-[var(--cc-text-muted)] rounded-lg px-1.5 py-0.5 focus:outline-none focus:border-emerald-500">
+          <div class="flex items-center flex-wrap gap-2 flex-none">
+            <select x-model="timelineRangeMode" title="Date range for this timeline only" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-[10px] text-[var(--cc-text-muted)] rounded-lg px-1.5 py-0.5 focus:outline-none focus:border-emerald-500">
               <option value="default">2wk Prior · 1wk Fwd</option>
               <option value="1m">1 Month</option>
               <option value="3m">3 Months</option>
               <option value="all">All Time</option>
               <option value="custom">Custom…</option>
             </select>
+            <template x-if="timelineRangeMode === 'custom'">
+              <div class="flex items-center gap-1">
+                <input type="date" x-model="timelineCustomRangeStart" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-[10px] text-[var(--cc-text)] rounded-lg px-1.5 py-0.5 focus:outline-none focus:border-emerald-500">
+                <span class="text-[var(--cc-text-muted)]">–</span>
+                <input type="date" x-model="timelineCustomRangeEnd" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-[10px] text-[var(--cc-text)] rounded-lg px-1.5 py-0.5 focus:outline-none focus:border-emerald-500">
+              </div>
+            </template>
+            <button x-show="rangesDiffer()" @click="syncTimelineToGraph()" title="Match the graph's date range" class="flex items-center gap-1 text-[10px] text-amber-400 hover:text-amber-300 font-semibold px-1.5 py-0.5 rounded-lg border border-amber-500/30 bg-amber-500/10 transition">
+              🔄 <span class="hidden lg:inline">Sync from graph</span>
+            </button>
             <span class="text-[10px] text-[var(--cc-text-muted)] font-mono whitespace-nowrap" x-text="getFilteredTransactions().length + ' of ' + transactions.length + ' items'"></span>
           </div>
         </div>
@@ -1199,10 +1212,15 @@
         searchQuery: '',
         categoryFilter: 'All',
 
-        // Shared date-range filter — applies to both the balance graph and the timeline.
-        dateRangeMode: 'default', // 'default' | '1m' | '3m' | 'all' | 'custom'
+        // Date-range filters — the graph and the timeline each have their own,
+        // independent of each other. A "sync" control lets you copy one onto the
+        // other when they differ, instead of forcing them to always match.
+        dateRangeMode: 'default', // graph: 'default' | '1m' | '3m' | 'all' | 'custom'
         customRangeStart: '',
         customRangeEnd: '',
+        timelineRangeMode: 'default', // timeline: same options, independent state
+        timelineCustomRangeStart: '',
+        timelineCustomRangeEnd: '',
         chartMeasuredWidth: 900,
 
         // ---------- ACCOUNT MENU (avatar dropdown) ----------
@@ -1257,9 +1275,9 @@
             document.documentElement.dataset.theme = val;
           });
 
-          // Re-anchor the timeline to "Today" whenever the date range changes,
-          // since switching ranges changes what's visible entirely.
-          this.$watch('dateRangeMode', () => this.scrollTimelineToToday());
+          // Re-anchor the timeline to "Today" whenever ITS OWN date range changes
+          // (the graph's range is independent and doesn't affect the timeline).
+          this.$watch('timelineRangeMode', () => this.scrollTimelineToToday());
           this.$watch('timelineMode', (val) => {
             try { localStorage.setItem('cc_timelineMode', val); } catch (e) {}
             this.scrollTimelineToToday();
@@ -1929,7 +1947,7 @@
 
         getFilteredTransactions() {
           const q = this.searchQuery.trim().toLowerCase();
-          const range = this.getActiveRange();
+          const range = this.getTimelineRange();
           return this.transactions.filter(t => {
             const matchesSearch = !q || (t.source + ' ' + (t.notes || '')).toLowerCase().includes(q);
             const matchesCategory = this.categoryFilter === 'All' || (t.category || 'Other') === this.categoryFilter;
@@ -1956,7 +1974,7 @@
           // something to a currently-empty day, or across the past/future divide,
           // both need a row to drop onto). Skip this for very long ranges ("All
           // Time" etc.) so the list doesn't balloon into hundreds of empty rows.
-          const windowDays = this.getGraphWindowDays();
+          const windowDays = this.getTimelineWindowDays();
           const useEveryDay = this.timelineMode === 'chronological' && windowDays.length > 0 && windowDays.length <= 120;
           const allDates = new Set([...(useEveryDay ? windowDays : []), ...Object.keys(groups)]);
           const sortedDates = Array.from(allDates).sort();
@@ -2041,38 +2059,76 @@
 
         // Resolves the shared date-range filter (dateRangeMode) to concrete bounds.
         // Drives both the balance graph window and the timeline's visible transactions.
-        getActiveRange() {
+        // Shared math behind both range filters — the graph and the timeline each
+        // keep their own mode/custom-dates state and call this independently, so
+        // picking "Custom" on one never affects the other.
+        resolveRange(mode, customStart, customEnd) {
           const today = new Date(this.todayStr + 'T00:00:00');
           const fmt = (d) => d.toISOString().split('T')[0];
           const fwd = new Date(today);
           fwd.setDate(fwd.getDate() + this.GRAPH_DAYS_FORWARD);
 
-          if (this.dateRangeMode === '1m') {
+          if (mode === '1m') {
             const s = new Date(today); s.setMonth(s.getMonth() - 1);
             return { start: fmt(s), end: fmt(fwd) };
           }
-          if (this.dateRangeMode === '3m') {
+          if (mode === '3m') {
             const s = new Date(today); s.setMonth(s.getMonth() - 3);
             return { start: fmt(s), end: fmt(fwd) };
           }
-          if (this.dateRangeMode === 'all') {
+          if (mode === 'all') {
             const dates = this.transactions.map(t => t.date).sort();
             return { start: dates.length ? dates[0] : fmt(today), end: fmt(fwd) };
           }
-          if (this.dateRangeMode === 'custom' && this.customRangeStart && this.customRangeEnd) {
-            return this.customRangeStart <= this.customRangeEnd
-              ? { start: this.customRangeStart, end: this.customRangeEnd }
-              : { start: this.customRangeEnd, end: this.customRangeStart };
+          if (mode === 'custom' && customStart && customEnd) {
+            return customStart <= customEnd
+              ? { start: customStart, end: customEnd }
+              : { start: customEnd, end: customStart };
           }
           const s = new Date(today); s.setDate(s.getDate() - this.GRAPH_DAYS_BACK);
           return { start: fmt(s), end: fmt(fwd) };
         },
 
+        getGraphRange() {
+          return this.resolveRange(this.dateRangeMode, this.customRangeStart, this.customRangeEnd);
+        },
+
+        getTimelineRange() {
+          return this.resolveRange(this.timelineRangeMode, this.timelineCustomRangeStart, this.timelineCustomRangeEnd);
+        },
+
+        // Whether the two filters currently resolve to a different window —
+        // drives showing the sync buttons.
+        rangesDiffer() {
+          const g = this.getGraphRange(), t = this.getTimelineRange();
+          return g.start !== t.start || g.end !== t.end;
+        },
+
+        syncTimelineToGraph() {
+          this.timelineRangeMode = this.dateRangeMode;
+          this.timelineCustomRangeStart = this.customRangeStart;
+          this.timelineCustomRangeEnd = this.customRangeEnd;
+          this.scrollTimelineToToday();
+        },
+
+        syncGraphToTimeline() {
+          this.dateRangeMode = this.timelineRangeMode;
+          this.customRangeStart = this.timelineCustomRangeStart;
+          this.customRangeEnd = this.timelineCustomRangeEnd;
+        },
+
         getGraphWindowDays() {
-          const { start, end } = this.getActiveRange();
+          return this.expandRangeToDays(this.getGraphRange());
+        },
+
+        getTimelineWindowDays() {
+          return this.expandRangeToDays(this.getTimelineRange());
+        },
+
+        expandRangeToDays(range) {
           const days = [];
-          const d = new Date(start + 'T00:00:00');
-          const endDate = new Date(end + 'T00:00:00');
+          const d = new Date(range.start + 'T00:00:00');
+          const endDate = new Date(range.end + 'T00:00:00');
           while (d <= endDate) {
             days.push(d.toISOString().split('T')[0]);
             d.setDate(d.getDate() + 1);
