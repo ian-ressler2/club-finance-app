@@ -365,22 +365,19 @@
       <!-- LEFT: STAT CARDS -->
       <div class="lg:col-span-4 flex flex-col justify-between gap-2.5">
 
-        <div class="bg-[color-mix(in_srgb,var(--cc-surface)_60%,transparent)] border border-[var(--cc-border)] rounded-xl p-3 shadow-lg">
-          <div class="flex justify-between items-center">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--cc-text-muted)]">Vault Starting Base</span>
-            <button x-show="can('admin')" @click="toggleEditStarting()" class="text-[10px] text-emerald-400 hover:underline">
-              <span x-text="editingStarting ? 'Done' : 'Edit'"></span>
-            </button>
-          </div>
+        <div class="flex items-center justify-between px-1 gap-2">
           <template x-if="!editingStarting">
-            <p class="text-base font-black text-[var(--cc-text-muted)] mt-0.5" x-text="'$' + Number(startingBalance).toFixed(2)"></p>
+            <span class="text-[10px] text-[var(--cc-text-muted)] truncate">Starting Base: <span class="font-bold text-[var(--cc-text)]" x-text="'$' + Number(startingBalance).toFixed(2)"></span></span>
           </template>
           <template x-if="editingStarting && can('admin')">
-            <div class="flex items-center gap-2 mt-1">
-              <span class="text-[var(--cc-text-muted)] text-xs font-bold">$</span>
-              <input type="number" step="0.01" x-model.number="startingBalance" @change="syncToFirebase()" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-xs text-[var(--cc-text)] px-2 py-0.5 rounded w-full focus:outline-none focus:border-emerald-500">
+            <div class="flex items-center gap-1.5 flex-1 min-w-0">
+              <span class="text-[var(--cc-text-muted)] text-[10px] font-bold flex-none">Starting Base: $</span>
+              <input type="number" step="0.01" x-model.number="startingBalance" @change="syncToFirebase()" autofocus class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-[10px] text-[var(--cc-text)] px-1.5 py-0.5 rounded w-20 focus:outline-none focus:border-emerald-500">
             </div>
           </template>
+          <button x-show="can('admin')" @click="toggleEditStarting()" class="text-[10px] text-emerald-400 hover:underline flex-none">
+            <span x-text="editingStarting ? 'Done' : 'Edit'"></span>
+          </button>
         </div>
 
         <div class="grid grid-cols-3 gap-2">
@@ -406,6 +403,9 @@
             </button>
             <button x-show="can('officer')" @click="showMemberForm = !showMemberForm" class="bg-[var(--cc-accent)] hover:brightness-110 text-white text-xs font-bold px-3 py-1 rounded-lg transition shadow-md">
               + Member
+            </button>
+            <button @click="openBudgetsList()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-3 py-1 rounded-lg transition shadow-md">
+              📅 Budgets
             </button>
             <button @click="showBreakdown = true" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-3 py-1 rounded-lg transition shadow-md">
               📊 Breakdown
@@ -518,7 +518,7 @@
           </select>
         </div>
 
-        <div x-ref="timelineScroll" class="relative flex-1 min-h-0 overflow-y-auto border border-[var(--cc-border)] rounded-xl bg-[color-mix(in_srgb,var(--cc-bg)_60%,transparent)] px-2 py-3">
+        <div x-ref="timelineScroll" @scroll.passive="onTimelineScroll()" class="relative flex-1 min-h-0 overflow-y-auto border border-[var(--cc-border)] rounded-xl bg-[color-mix(in_srgb,var(--cc-bg)_60%,transparent)] px-2 py-3">
           <div class="relative">
           <!-- deposit/withdrawal side tint — a faint green wash on the left half,
                red on the right, so the two sides read as distinct zones at a glance.
@@ -539,7 +539,7 @@
           </template>
 
           <template x-for="row in getTimelineRows()" :key="row.kind === 'today' ? 'today-marker' : row.date">
-            <div>
+            <div :data-row-date="row.kind === 'group' ? row.date : null">
               <!-- TODAY MARKER -->
               <template x-if="row.kind === 'today'">
                 <div data-today-marker class="relative flex items-center my-2 z-10"
@@ -567,13 +567,14 @@
                        @dragleave="dragHoverKey = null"
                        @drop="handleDrop($event, 'deposit', row.date)">
                     <template x-for="item in row.deposits" :key="item.id">
-                      <div :draggable="can('officer')" @dragstart="handleDragStart($event, item)"
-                           class="draggable-item bg-[var(--cc-surface)] border p-2 rounded-lg flex items-center justify-between gap-2 shadow-md w-full sm:max-w-[280px] hover:shadow-xl hover:brightness-110 transition"
+                      <div :draggable="can('officer')" @dragstart="handleDragStart($event, item)" @click="openEditTransaction(item)"
+                           class="draggable-item bg-[var(--cc-surface)] border p-2 rounded-lg flex items-center justify-between gap-2 shadow-md w-full sm:max-w-[280px] hover:shadow-xl hover:brightness-110 transition cursor-pointer"
                            :class="isUpcoming(item.date) ? 'border-[var(--cc-border)] bg-[color-mix(in_srgb,var(--cc-surface)_40%,transparent)] text-[var(--cc-text-muted)]' : 'border-emerald-900/60 text-emerald-300'">
                         <div class="min-w-0">
                           <div class="flex items-center gap-1.5">
                             <span class="text-xs font-bold text-[var(--cc-text)] truncate" x-text="item.source"></span>
                             <span x-show="!item.duesFor && item.category && item.category !== 'Other'" class="text-[8px] px-1.5 py-0.5 rounded border flex-none" :class="categoryClass(item.category)" x-text="item.category"></span>
+                            <span x-show="item.budgetId" class="text-[8px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/30 flex-none" x-text="'📅 ' + getBudgetTitle(item.budgetId)"></span>
                             <span x-show="item.duesFor" class="text-[8px] bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded border border-purple-500/30 flex-none">Dues</span>
                             <span x-show="item.recurringGroup" class="text-[8px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/30 flex-none">↻ Recurring</span>
                             <span x-show="isUpcoming(item.date)" class="text-[8px] bg-[var(--cc-chip)] text-[var(--cc-text-muted)] px-1.5 py-0.5 rounded border border-[var(--cc-border)] flex-none">Scheduled</span>
@@ -587,7 +588,7 @@
                         </div>
                         <div class="flex items-center gap-2 flex-none">
                           <span class="text-xs font-bold font-mono" :class="isUpcoming(item.date) ? 'text-[var(--cc-text-muted)]' : 'text-emerald-400'" x-text="'+$' + Number(item.amount).toFixed(2)"></span>
-                          <button x-show="can('officer')" @click="deleteTransaction(item.id)" class="text-slate-600 hover:text-rose-400 text-xs" aria-label="Delete transaction">✕</button>
+                          <button x-show="can('officer')" @click.stop="deleteTransaction(item.id)" class="text-slate-600 hover:text-rose-400 text-xs" aria-label="Delete transaction">✕</button>
                         </div>
                       </div>
                     </template>
@@ -603,11 +604,11 @@
                        @dragleave="dragHoverKey = null"
                        @drop="handleDrop($event, 'expense', row.date)">
                     <template x-for="item in row.withdrawals" :key="item.id">
-                      <div :draggable="can('officer')" @dragstart="handleDragStart($event, item)"
-                           class="draggable-item bg-[var(--cc-surface)] border p-2 rounded-lg flex items-center justify-between gap-2 shadow-md w-full sm:max-w-[280px] hover:shadow-xl hover:brightness-110 transition"
+                      <div :draggable="can('officer')" @dragstart="handleDragStart($event, item)" @click="openEditTransaction(item)"
+                           class="draggable-item bg-[var(--cc-surface)] border p-2 rounded-lg flex items-center justify-between gap-2 shadow-md w-full sm:max-w-[280px] hover:shadow-xl hover:brightness-110 transition cursor-pointer"
                            :class="isUpcoming(item.date) ? 'border-[var(--cc-border)] bg-[color-mix(in_srgb,var(--cc-surface)_40%,transparent)] text-[var(--cc-text-muted)]' : 'border-rose-900/60 text-rose-300'">
                         <div class="flex items-center gap-2 flex-none">
-                          <button x-show="can('officer')" @click="deleteTransaction(item.id)" class="text-slate-600 hover:text-rose-400 text-xs" aria-label="Delete transaction">✕</button>
+                          <button x-show="can('officer')" @click.stop="deleteTransaction(item.id)" class="text-slate-600 hover:text-rose-400 text-xs" aria-label="Delete transaction">✕</button>
                           <span class="text-xs font-bold font-mono" :class="isUpcoming(item.date) ? 'text-[var(--cc-text-muted)]' : 'text-rose-400'" x-text="'-$' + Number(item.amount).toFixed(2)"></span>
                         </div>
                         <div class="min-w-0 text-right">
@@ -615,6 +616,7 @@
                             <span x-show="isUpcoming(item.date)" class="text-[8px] bg-[var(--cc-chip)] text-[var(--cc-text-muted)] px-1.5 py-0.5 rounded border border-[var(--cc-border)] flex-none">Scheduled</span>
                             <span x-show="item.recurringGroup" class="text-[8px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/30 flex-none">↻ Recurring</span>
                             <span x-show="item.category && item.category !== 'Other'" class="text-[8px] px-1.5 py-0.5 rounded border flex-none" :class="categoryClass(item.category)" x-text="item.category"></span>
+                            <span x-show="item.budgetId" class="text-[8px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/30 flex-none" x-text="'📅 ' + getBudgetTitle(item.budgetId)"></span>
                             <span class="text-xs font-bold text-[var(--cc-text)] truncate" x-text="item.source"></span>
                           </div>
                           <div class="flex items-center gap-1.5 justify-end">
@@ -638,9 +640,12 @@
 
       <!-- ROSTER PANEL (4 cols) -->
       <div class="lg:col-span-4 bg-[color-mix(in_srgb,var(--cc-surface)_60%,transparent)] border border-[var(--cc-border)] rounded-xl p-3.5 shadow-lg flex flex-col min-h-[260px] lg:min-h-0 overflow-y-auto">
-        <div class="flex justify-between items-center mb-1 flex-none">
+        <div class="flex justify-between items-center mb-1 flex-none gap-2">
           <h2 class="text-xs font-bold text-[var(--cc-text)] flex items-center gap-2">👥 Roster &amp; Dues</h2>
-          <span class="text-[10px] text-[var(--cc-text-muted)] font-mono" x-text="roster.length + ' members'"></span>
+          <div class="flex items-center gap-2 flex-none">
+            <button x-show="can('officer')" @click="openBulkCharge()" class="text-[10px] font-bold text-emerald-400 hover:underline">＋ Bulk Charge</button>
+            <span class="text-[10px] text-[var(--cc-text-muted)] font-mono" x-text="roster.length + ' members'"></span>
+          </div>
         </div>
 
         <div class="flex items-center justify-between gap-2 mb-2 flex-none">
@@ -810,6 +815,66 @@
         </div>
       </form>
     </div>
+  </div>
+
+  <!-- EDIT TRANSACTION MODAL -->
+  <div x-show="showEditTxn" x-cloak class="fixed inset-0 bg-[color-mix(in_srgb,var(--cc-bg)_80%,transparent)] backdrop-blur-sm z-50 flex items-center justify-center p-4" x-transition>
+    <template x-if="editingTxn">
+      <div class="bg-[var(--cc-surface)] border border-[var(--cc-border)] rounded-xl shadow-2xl w-[80vw] max-w-2xl h-[80vh] flex flex-col">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-[var(--cc-border)] flex-none">
+          <h3 class="text-sm font-bold text-[var(--cc-text)]"><span x-text="can('officer') ? 'Edit Transaction' : 'Transaction Details'"></span></h3>
+          <button @click="closeEditTransaction()" class="text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] text-lg leading-none" aria-label="Close">✕</button>
+        </div>
+
+        <form @submit.prevent="saveEditTransaction()" class="flex-1 min-h-0 overflow-y-auto px-5 py-4 flex flex-col">
+          <p x-show="editingTxnIsLinked()" class="text-[10px] text-amber-400 font-semibold mb-3 bg-amber-500/10 border border-amber-500/30 rounded-lg px-2.5 py-1.5">⚠ This transaction is linked to dues, a member charge, or a budget. Changes here won't update that linked record.</p>
+          <fieldset :disabled="!can('officer')" class="contents">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1 content-start">
+            <div>
+              <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Title / Source</label>
+              <input type="text" x-model="editingTxn.source" class="w-full mt-1 bg-[var(--cc-bg)] text-sm text-[var(--cc-text)] border border-[var(--cc-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500 disabled:opacity-60" required>
+            </div>
+            <div>
+              <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Amount ($)</label>
+              <input type="number" step="0.01" min="0" x-model="editingTxn.amount" class="w-full mt-1 bg-[var(--cc-bg)] text-sm text-[var(--cc-text)] border border-[var(--cc-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500 disabled:opacity-60" required>
+            </div>
+            <div>
+              <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Type</label>
+              <select x-model="editingTxn.type" class="w-full mt-1 bg-[var(--cc-bg)] text-sm text-[var(--cc-text)] border border-[var(--cc-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500 disabled:opacity-60">
+                <option value="deposit">Deposit</option>
+                <option value="expense">Withdrawal</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Category</label>
+              <select x-model="editingTxn.category" class="w-full mt-1 bg-[var(--cc-bg)] text-sm text-[var(--cc-text)] border border-[var(--cc-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500 disabled:opacity-60">
+                <option value="Dues">Dues</option>
+                <option value="Fundraising">Fundraising</option>
+                <option value="Merchandise">Merchandise</option>
+                <option value="Events">Events</option>
+                <option value="Equipment">Equipment</option>
+                <option value="Travel">Travel</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Date</label>
+              <input type="date" x-model="editingTxn.date" class="w-full mt-1 bg-[var(--cc-bg)] text-sm text-[var(--cc-text)] border border-[var(--cc-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500 disabled:opacity-60" required>
+            </div>
+            <div>
+              <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Notes <span class="text-slate-600 normal-case font-normal">(optional)</span></label>
+              <input type="text" placeholder="Notes" x-model="editingTxn.notes" class="w-full mt-1 bg-[var(--cc-bg)] text-sm text-[var(--cc-text)] border border-[var(--cc-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500 disabled:opacity-60">
+            </div>
+          </div>
+          </fieldset>
+
+          <div class="flex-none flex justify-end gap-2 pt-4 mt-4 border-t border-[var(--cc-border)]">
+            <button type="button" @click="closeEditTransaction()" class="text-sm font-bold text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] px-4 py-2 rounded-lg transition">Close</button>
+            <button x-show="can('officer')" type="submit" class="bg-[var(--cc-primary)] hover:brightness-110 text-white text-sm font-bold px-5 py-2 rounded-lg transition">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </template>
   </div>
 
   <!-- ADD MEMBER MODAL -->
@@ -1033,6 +1098,217 @@
     </template>
   </div>
 
+  <!-- BULK MEMBER CHARGE MODAL -->
+  <div x-show="showBulkCharge" x-cloak class="fixed inset-0 bg-[color-mix(in_srgb,var(--cc-bg)_80%,transparent)] backdrop-blur-sm z-50 flex items-center justify-center p-4" x-transition>
+    <div class="bg-[var(--cc-surface)] border border-[var(--cc-border)] rounded-xl shadow-2xl w-[90vw] max-w-md max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-[var(--cc-border)] flex-none">
+        <h3 class="text-sm font-bold text-[var(--cc-text)]">Bulk Charge <span class="text-[var(--cc-text-muted)] font-normal">(add the same entry to multiple members)</span></h3>
+        <button @click="showBulkCharge = false" class="text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] text-lg leading-none flex-none" aria-label="Close">✕</button>
+      </div>
+
+      <div class="px-5 py-3 border-b border-[var(--cc-border)] flex-none">
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-[10px] font-bold uppercase tracking-wider text-[var(--cc-text-muted)]">Members</p>
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] text-[var(--cc-text-muted)]" x-text="bulkSelectedCount() + ' of ' + roster.length + ' selected'"></span>
+            <button type="button" @click="toggleAllBulkSelected(true)" class="text-[10px] text-emerald-400 hover:underline">All</button>
+            <button type="button" @click="toggleAllBulkSelected(false)" class="text-[10px] text-[var(--cc-text-muted)] hover:underline">None</button>
+          </div>
+        </div>
+        <div class="max-h-32 overflow-y-auto space-y-1">
+          <template x-for="member in roster" :key="member.id">
+            <label class="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-[var(--cc-chip)] cursor-pointer">
+              <input type="checkbox" :checked="!!bulkChargeSelected[member.id]" @change="bulkChargeSelected[member.id] = $event.target.checked" class="accent-emerald-500 w-3.5 h-3.5">
+              <span class="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black text-white flex-none" :class="avatarColor(member.name)" x-text="initials(member.name)"></span>
+              <span class="text-xs text-[var(--cc-text)] truncate" x-text="member.name"></span>
+            </label>
+          </template>
+          <p x-show="roster.length === 0" class="text-center py-3 text-[11px] italic text-[var(--cc-text-muted)]">No members on the roster yet.</p>
+        </div>
+      </div>
+
+      <form @submit.prevent="submitBulkCharge()" class="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-2">
+        <div class="flex gap-1.5">
+          <button type="button" @click="bulkCharge.direction = 'owes'" :class="bulkCharge.direction === 'owes' ? 'bg-rose-600 text-white' : 'bg-[var(--cc-chip)] text-[var(--cc-text-muted)]'" class="flex-1 text-[10px] font-bold py-1.5 rounded-lg transition">They Owe The Club</button>
+          <button type="button" @click="bulkCharge.direction = 'credit'" :class="bulkCharge.direction === 'credit' ? 'bg-emerald-600 text-white' : 'bg-[var(--cc-chip)] text-[var(--cc-text-muted)]'" class="flex-1 text-[10px] font-bold py-1.5 rounded-lg transition">Club Owes Them</button>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <input type="text" x-model="bulkCharge.label" placeholder="e.g. Team T-Shirt" class="col-span-2 bg-[var(--cc-bg)] border border-[var(--cc-border)] text-xs text-[var(--cc-text)] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500" required>
+          <input type="number" step="0.01" min="0" x-model="bulkCharge.amount" placeholder="Amount ($) — each" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-xs text-[var(--cc-text)] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500" required>
+          <select x-model="bulkCharge.category" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-xs text-[var(--cc-text)] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500">
+            <option value="Dues">Dues</option>
+            <option value="Fundraising">Fundraising</option>
+            <option value="Merchandise">Merchandise</option>
+            <option value="Events">Events</option>
+            <option value="Equipment">Equipment</option>
+            <option value="Travel">Travel</option>
+            <option value="Other">Other</option>
+          </select>
+          <input type="text" x-model="bulkCharge.notes" placeholder="Notes (optional)" class="col-span-2 bg-[var(--cc-bg)] border border-[var(--cc-border)] text-xs text-[var(--cc-text)] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500">
+        </div>
+        <p class="text-[10px] text-[var(--cc-text-muted)]">This exact entry — same label, amount, and category — will be added individually to each selected member's ledger.</p>
+        <button type="submit" :disabled="bulkSelectedCount() === 0" class="w-full bg-[var(--cc-primary)] hover:brightness-110 disabled:opacity-50 text-white text-sm font-bold py-2 rounded-lg transition" x-text="'Add to ' + bulkSelectedCount() + ' Member' + (bulkSelectedCount() === 1 ? '' : 's')"></button>
+      </form>
+    </div>
+  </div>
+
+  <!-- BUDGETS LIST MODAL -->
+  <div x-show="showBudgetsList" x-cloak class="fixed inset-0 bg-[color-mix(in_srgb,var(--cc-bg)_80%,transparent)] backdrop-blur-sm z-50 flex items-center justify-center p-4" x-transition>
+    <div class="bg-[var(--cc-surface)] border border-[var(--cc-border)] rounded-xl shadow-2xl w-[90vw] max-w-lg max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-[var(--cc-border)] flex-none">
+        <h3 class="text-sm font-bold text-[var(--cc-text)] flex items-center gap-2">📅 Budgets &amp; Events</h3>
+        <button @click="showBudgetsList = false" class="text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] text-lg leading-none" aria-label="Close">✕</button>
+      </div>
+
+      <div class="flex-1 min-h-0 overflow-y-auto px-5 py-3 space-y-2">
+        <template x-if="sortedBudgets().length === 0">
+          <p class="text-center py-8 text-[11px] italic text-[var(--cc-text-muted)]">No budgets yet. Create one to start planning an event.</p>
+        </template>
+        <template x-for="budget in sortedBudgets()" :key="budget.id">
+          <button @click="openBudgetDetail(budget.id)" class="w-full text-left bg-[color-mix(in_srgb,var(--cc-bg)_70%,transparent)] border border-[var(--cc-border)] hover:border-indigo-500/40 rounded-lg px-3 py-2.5 transition">
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-xs font-bold text-[var(--cc-text)] truncate" x-text="budget.title"></p>
+              <span class="text-[10px] text-[var(--cc-text-muted)] font-mono flex-none" x-text="formatDate(budget.eventDate)"></span>
+            </div>
+            <div class="flex items-center flex-wrap gap-x-3 gap-y-0.5 mt-1 text-[9px] text-[var(--cc-text-muted)]">
+              <span>Budgeted <span class="font-bold text-[var(--cc-text)]" x-text="'$' + getBudgetProgress(budget).budgeted.toFixed(2)"></span></span>
+              <span>Actual <span class="font-bold text-[var(--cc-text)]" x-text="'$' + getBudgetProgress(budget).actual.toFixed(2)"></span></span>
+              <span>Collected <span class="font-bold text-emerald-400" x-text="'$' + getBudgetProgress(budget).collected.toFixed(2)"></span></span>
+              <span x-show="getBudgetProgress(budget).outstanding > 0">Outstanding <span class="font-bold text-rose-400" x-text="'$' + getBudgetProgress(budget).outstanding.toFixed(2)"></span></span>
+            </div>
+          </button>
+        </template>
+      </div>
+
+      <div x-show="can('officer')" class="px-5 py-4 border-t border-[var(--cc-border)] flex-none">
+        <form @submit.prevent="createBudget()" class="grid grid-cols-2 gap-2">
+          <input type="text" x-model="newBudget.title" placeholder="Event title (e.g. Madison Swim Meet)" class="col-span-2 bg-[var(--cc-bg)] border border-[var(--cc-border)] text-xs text-[var(--cc-text)] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500" required>
+          <input type="date" x-model="newBudget.eventDate" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-xs text-[var(--cc-text)] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500" required>
+          <input type="number" step="0.01" min="0" x-model="newBudget.targetAmount" placeholder="Budgeted amount ($, optional)" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-xs text-[var(--cc-text)] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500">
+          <button type="submit" class="col-span-2 bg-[var(--cc-primary)] hover:brightness-110 text-white text-xs font-bold py-1.5 rounded-lg transition">+ New Budget</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUDGET DETAIL MODAL -->
+  <div x-show="showBudgetDetail" x-cloak class="fixed inset-0 bg-[color-mix(in_srgb,var(--cc-bg)_80%,transparent)] backdrop-blur-sm z-50 flex items-center justify-center p-4" x-transition>
+    <template x-if="getActiveBudget()">
+      <div class="bg-[var(--cc-surface)] border border-[var(--cc-border)] rounded-xl shadow-2xl w-[92vw] max-w-2xl max-h-[88vh] flex flex-col">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-[var(--cc-border)] flex-none gap-2">
+          <div class="min-w-0">
+            <h3 class="text-sm font-bold text-[var(--cc-text)] truncate" x-text="getActiveBudget().title"></h3>
+            <p class="text-[10px] text-[var(--cc-text-muted)]" x-text="formatDate(getActiveBudget().eventDate)"></p>
+          </div>
+          <div class="flex items-center gap-2 flex-none">
+            <button @click="sendBudgetReminder(getActiveBudget())" class="text-[10px] font-bold text-emerald-400 hover:underline whitespace-nowrap">📤 Send Reminder</button>
+            <button x-show="can('admin')" @click="deleteBudget(activeBudgetId)" class="text-[var(--cc-text-muted)] hover:text-rose-400 text-xs" aria-label="Delete budget">🗑</button>
+            <button @click="closeBudgetDetail()" class="text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] text-lg leading-none" aria-label="Close">✕</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-4 gap-2 px-5 py-3 border-b border-[var(--cc-border)] flex-none text-center">
+          <div><p class="text-[9px] text-[var(--cc-text-muted)] uppercase">Budgeted</p><p class="text-sm font-black text-[var(--cc-text)]" x-text="'$' + getBudgetProgress(getActiveBudget()).budgeted.toFixed(2)"></p></div>
+          <div><p class="text-[9px] text-[var(--cc-text-muted)] uppercase">Actual</p><p class="text-sm font-black text-[var(--cc-text)]" x-text="'$' + getBudgetProgress(getActiveBudget()).actual.toFixed(2)"></p></div>
+          <div><p class="text-[9px] text-[var(--cc-text-muted)] uppercase">Collected</p><p class="text-sm font-black text-emerald-400" x-text="'$' + getBudgetProgress(getActiveBudget()).collected.toFixed(2)"></p></div>
+          <div><p class="text-[9px] text-[var(--cc-text-muted)] uppercase">Outstanding</p><p class="text-sm font-black text-rose-400" x-text="'$' + getBudgetProgress(getActiveBudget()).outstanding.toFixed(2)"></p></div>
+        </div>
+
+        <!-- budget-level (lump-sum) divide -->
+        <div class="px-5 pt-3 flex-none">
+          <button x-show="can('officer') && getActiveBudget().mode !== 'itemized' && (getActiveBudget().lumpDivisions || []).length === 0 && !divideContext" @click="openDivideForm(null)" class="w-full text-[10px] font-bold text-indigo-400 hover:underline border border-indigo-500/30 bg-indigo-500/10 rounded-lg py-1.5 transition">
+            Divide Whole Budget (lump sum across members)
+          </button>
+          <div x-show="(getActiveBudget().lumpDivisions || []).length > 0" class="space-y-1 border border-indigo-500/20 bg-indigo-500/5 rounded-lg p-2">
+            <p class="text-[9px] font-bold uppercase tracking-wider text-indigo-400">Whole-Budget Division</p>
+            <template x-for="div in (getActiveBudget().lumpDivisions || [])" :key="div.id">
+              <div class="flex items-center justify-between gap-2 text-[10px]">
+                <span class="text-[var(--cc-text-muted)] truncate" x-text="(roster.find(m => m.id === div.memberId)?.name || 'Unknown') + ' · due ' + formatDate(div.dueDate)"></span>
+                <div class="flex items-center gap-1.5 flex-none">
+                  <span class="font-mono" x-text="'$' + Number(div.amount).toFixed(2)"></span>
+                  <button :disabled="!can('officer')" @click="toggleChargeSettled(div.chargeId, div.memberId)" class="text-[9px] font-bold px-1.5 py-0.5 rounded border" :class="isChargeSettled(div) ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-[var(--cc-chip)] text-[var(--cc-text-muted)] border-[var(--cc-border)]'" x-text="isChargeSettled(div) ? 'Settled ✓' : 'Settle'"></button>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- expenses -->
+        <div class="flex-1 min-h-0 overflow-y-auto px-5 py-3 space-y-2">
+          <template x-if="getActiveBudget().expenses.length === 0">
+            <p class="text-center py-6 text-[11px] italic text-[var(--cc-text-muted)]">No expenses added yet.</p>
+          </template>
+          <template x-for="expense in getActiveBudget().expenses" :key="expense.id">
+            <div class="bg-[color-mix(in_srgb,var(--cc-bg)_70%,transparent)] border border-[var(--cc-border)] rounded-lg px-3 py-2.5">
+              <div class="flex items-center justify-between gap-2">
+                <div class="min-w-0">
+                  <p class="text-xs font-bold text-[var(--cc-text)] truncate" x-text="expense.label"></p>
+                  <p class="text-[9px] text-[var(--cc-text-muted)]" x-text="'Due ' + formatDate(expense.dueDate) + ' · ' + expense.category"></p>
+                </div>
+                <div class="flex items-center gap-2 flex-none">
+                  <span class="text-xs font-bold font-mono text-rose-400" x-text="'-$' + Number(expense.amount).toFixed(2)"></span>
+                  <button x-show="can('officer')" @click="removeBudgetExpense(expense.id)" class="text-slate-600 hover:text-rose-400 text-xs" aria-label="Remove expense">✕</button>
+                </div>
+              </div>
+
+              <div x-show="(expense.divisions || []).length > 0" class="mt-2 space-y-1 pl-2 border-l-2 border-[var(--cc-border)]">
+                <template x-for="div in (expense.divisions || [])" :key="div.id">
+                  <div class="flex items-center justify-between gap-2 text-[10px]">
+                    <span class="text-[var(--cc-text-muted)] truncate" x-text="(roster.find(m => m.id === div.memberId)?.name || 'Unknown') + ' · due ' + formatDate(div.dueDate)"></span>
+                    <div class="flex items-center gap-1.5 flex-none">
+                      <span class="font-mono" x-text="'$' + Number(div.amount).toFixed(2)"></span>
+                      <button :disabled="!can('officer')" @click="toggleChargeSettled(div.chargeId, div.memberId)" class="text-[9px] font-bold px-1.5 py-0.5 rounded border" :class="isChargeSettled(div) ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-[var(--cc-chip)] text-[var(--cc-text-muted)] border-[var(--cc-border)]'" x-text="isChargeSettled(div) ? 'Settled ✓' : 'Settle'"></button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+
+              <button x-show="can('officer') && (expense.divisions || []).length === 0 && getActiveBudget().mode !== 'lumpsum' && !(divideContext && divideContext.expenseId === expense.id)" @click="openDivideForm(expense.id)" class="mt-2 text-[9px] font-bold text-indigo-400 hover:underline">Divide this expense</button>
+            </div>
+          </template>
+        </div>
+
+        <!-- inline divide form -->
+        <div x-show="divideContext" class="px-5 py-3 border-t border-[var(--cc-border)] flex-none space-y-2 max-h-64 overflow-y-auto">
+          <div class="flex items-center justify-between">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-[var(--cc-text-muted)]" x-text="'Divide: $' + getDivideTargetAmount().toFixed(2)"></p>
+            <button @click="closeDivideForm()" class="text-[10px] text-[var(--cc-text-muted)] hover:underline">Cancel</button>
+          </div>
+          <template x-for="member in roster" :key="member.id">
+            <div class="flex items-center gap-2">
+              <input type="checkbox" :checked="!!divideSelected[member.id]" @change="toggleDivideSelected(member.id, $event.target.checked)" class="accent-emerald-500 w-3.5 h-3.5 flex-none">
+              <span class="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black text-white flex-none" :class="avatarColor(member.name)" x-text="initials(member.name)"></span>
+              <span class="text-xs text-[var(--cc-text)] truncate flex-1" x-text="member.name"></span>
+              <input type="number" step="0.01" min="0" x-show="divideSelected[member.id]" x-model.number="divideAmounts[member.id]" class="w-20 bg-[var(--cc-bg)] border border-[var(--cc-border)] text-[10px] text-[var(--cc-text)] rounded px-1.5 py-1 flex-none">
+              <input type="date" x-show="divideSelected[member.id]" x-model="divideDueDates[member.id]" class="w-28 bg-[var(--cc-bg)] border border-[var(--cc-border)] text-[10px] text-[var(--cc-text)] rounded px-1.5 py-1 flex-none">
+            </div>
+          </template>
+          <p x-show="divideMismatch()" class="text-[10px] text-amber-400 font-semibold">⚠ Sums to $<span x-text="getDivideSum().toFixed(2)"></span>, but the target is $<span x-text="getDivideTargetAmount().toFixed(2)"></span>.</p>
+          <button @click="saveDivision()" class="w-full bg-[var(--cc-primary)] hover:brightness-110 text-white text-xs font-bold py-1.5 rounded-lg transition">Save Division</button>
+        </div>
+
+        <!-- add expense -->
+        <div x-show="can('officer') && !divideContext" class="px-5 py-4 border-t border-[var(--cc-border)] flex-none">
+          <form @submit.prevent="addBudgetExpense()" class="grid grid-cols-2 gap-2">
+            <input type="text" x-model="newBudgetExpense.label" placeholder="Expense label (e.g. Team Entry Fee)" class="col-span-2 bg-[var(--cc-bg)] border border-[var(--cc-border)] text-xs text-[var(--cc-text)] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500" required>
+            <input type="number" step="0.01" min="0" x-model="newBudgetExpense.amount" placeholder="Amount ($)" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-xs text-[var(--cc-text)] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500" required>
+            <input type="date" x-model="newBudgetExpense.dueDate" class="bg-[var(--cc-bg)] border border-[var(--cc-border)] text-xs text-[var(--cc-text)] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500" required>
+            <select x-model="newBudgetExpense.category" class="col-span-2 bg-[var(--cc-bg)] border border-[var(--cc-border)] text-xs text-[var(--cc-text)] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500">
+              <option value="Dues">Dues</option>
+              <option value="Fundraising">Fundraising</option>
+              <option value="Merchandise">Merchandise</option>
+              <option value="Events">Events</option>
+              <option value="Equipment">Equipment</option>
+              <option value="Travel">Travel</option>
+              <option value="Other">Other</option>
+            </select>
+            <button type="submit" class="col-span-2 bg-[var(--cc-primary)] hover:brightness-110 text-white text-xs font-bold py-1.5 rounded-lg transition">+ Add Expense</button>
+          </form>
+        </div>
+      </div>
+    </template>
+  </div>
+
   <!-- ACTIVITY LOG MODAL -->
   <div x-show="showActivityLog" x-cloak class="fixed inset-0 bg-[color-mix(in_srgb,var(--cc-bg)_80%,transparent)] backdrop-blur-sm z-50 flex items-center justify-center p-4" x-transition>
     <div class="bg-[var(--cc-surface)] border border-[var(--cc-border)] p-5 rounded-xl max-w-md w-full shadow-2xl max-h-[80vh] flex flex-col">
@@ -1050,6 +1326,7 @@
             <p class="text-xs text-[var(--cc-text-muted)] leading-snug">
               <span class="font-bold text-slate-100" x-text="entry.actor"></span>
               <span x-text="' ' + entry.action"></span>
+              <span x-show="entry.tag" class="inline-block text-[8px] bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/30 ml-1" x-text="'📅 ' + entry.tag"></span>
               <span class="block text-[10px] text-[var(--cc-text-muted)] mt-0.5" x-text="relativeTime(entry.ts)"></span>
             </p>
           </div>
@@ -1096,6 +1373,10 @@
     <button x-show="can('officer')" @click="showMemberForm = !showMemberForm" class="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 active:bg-[var(--cc-chip)] transition">
       <span class="text-lg leading-none" style="color: var(--cc-accent)">👤</span>
       <span class="text-[9px] font-semibold text-[var(--cc-text-muted)]">Member</span>
+    </button>
+    <button @click="openBudgetsList()" class="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 active:bg-[var(--cc-chip)] transition">
+      <span class="text-lg leading-none">📅</span>
+      <span class="text-[9px] font-semibold text-[var(--cc-text-muted)]">Budgets</span>
     </button>
     <button @click="showBreakdown = true" class="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 active:bg-[var(--cc-chip)] transition">
       <span class="text-lg leading-none">📊</span>
@@ -1199,7 +1480,25 @@
         ledgerMemberId: null,
         newCharge: { label: '', amount: '', direction: 'owes', category: 'Other', notes: '' },
 
+        // ---------- BULK MEMBER CHARGE (add the same charge/credit to many members at once) ----------
+        showBulkCharge: false,
+        bulkChargeSelected: {},
+        bulkCharge: { label: '', amount: '', direction: 'owes', category: 'Other', notes: '' },
+
+        // ---------- BUDGETS / EVENTS ----------
+        showBudgetsList: false,
+        showBudgetDetail: false,
+        activeBudgetId: null,
+        newBudget: { title: '', eventDate: '', targetAmount: '' },
+        newBudgetExpense: { label: '', amount: '', dueDate: '', category: 'Other' },
+        divideContext: null, // { expenseId: string|null } while a divide form is open — null expenseId means budget-level
+        divideSelected: {},
+        divideAmounts: {},
+        divideDueDates: {},
+
         showTxForm: false,
+        showEditTxn: false,
+        editingTxn: null,
         showMemberForm: false,
         hoveredPoint: null,
         draggedItem: null,
@@ -1246,6 +1545,12 @@
         // view. Persisted locally since it's a personal display preference.
         timelineMode: (function() { try { return localStorage.getItem('cc_timelineMode') || 'chronological'; } catch (e) { return 'chronological'; } })(),
         editingDateId: null, // id of the transaction card currently showing its inline date picker
+        // The band of dates currently visible in the timeline's scroll viewport —
+        // mirrored on the graph as a shaded region (top/bottom of the scroll area,
+        // not just a single point, since the timeline shows a whole range at once).
+        timelineScrollRangeStart: null,
+        timelineScrollRangeEnd: null,
+        _scrollSyncQueued: false,
 
         // ---------- CLUB THEME (per-club accent colors) ----------
         clubTheme: {},
@@ -1253,6 +1558,7 @@
 
         transactions: [],
         roster: [],
+        budgets: [],
 
         // ---------- INIT ----------
         init() {
@@ -1319,6 +1625,7 @@
           this.duesAmount = 50;
           this.transactions = [];
           this.roster = [];
+          this.budgets = [];
         },
 
         attachUserListener(uid) {
@@ -1418,6 +1725,30 @@
             if (!container) return;
             const marker = container.querySelector('[data-today-marker]');
             if (marker) container.scrollTop = Math.max(0, marker.offsetTop - 12);
+            this.onTimelineScroll();
+          });
+        },
+
+        // Tracks which dates sit at the top and bottom of the timeline's visible
+        // scroll area, so the graph can shade that whole band — scrolling the
+        // timeline moves a region on the graph showing which range of dates is
+        // currently in view (the timeline shows a range, not a single date).
+        // rAF-throttled since scroll fires far more often than needed here.
+        onTimelineScroll() {
+          if (this._scrollSyncQueued) return;
+          this._scrollSyncQueued = true;
+          requestAnimationFrame(() => {
+            this._scrollSyncQueued = false;
+            const container = this.$refs.timelineScroll;
+            if (!container) return;
+            const rect = container.getBoundingClientRect();
+            const dateAt = (y) => {
+              const el = document.elementFromPoint(rect.left + rect.width / 2, y);
+              const rowEl = el ? el.closest('[data-row-date]') : null;
+              return rowEl ? rowEl.getAttribute('data-row-date') : null;
+            };
+            this.timelineScrollRangeStart = dateAt(rect.top + 10);
+            this.timelineScrollRangeEnd = dateAt(rect.bottom - 10);
           });
         },
 
@@ -1455,6 +1786,7 @@
             this.duesAmount = fd.duesAmount ?? 50;
             this.transactions = fd.transactions ?? [];
             this.roster = fd.roster ?? [];
+            this.budgets = fd.budgets ?? [];
           });
           this._membersUnsub = onValue(ref(db, `clubs/${clubId}/members`), (snap) => {
             this.clubMembers = snap.val() || {};
@@ -1468,13 +1800,15 @@
           });
         },
 
-        logActivity(action) {
+        logActivity(action, tag) {
           if (!this.activeClubId || !this.user) return;
-          push(ref(db, `clubs/${this.activeClubId}/activityLog`), {
+          const entry = {
             actor: this.user.name || this.user.email,
             action,
             ts: new Date().toISOString()
-          });
+          };
+          if (tag) entry.tag = tag;
+          push(ref(db, `clubs/${this.activeClubId}/activityLog`), entry);
         },
 
         relativeTime(iso) {
@@ -1502,7 +1836,8 @@
             startingBalance: this.startingBalance,
             duesAmount: this.duesAmount,
             transactions: this.transactions,
-            roster: this.roster
+            roster: this.roster,
+            budgets: this.budgets
           });
         },
 
@@ -1662,7 +1997,8 @@
                   startingBalance: 0,
                   duesAmount: 50,
                   transactions: [],
-                  roster: [{ id: this.newId(), name: this.user.name || this.user.email, role: 'Admin', notes: '', duesPaid: false, charges: [] }]
+                  roster: [{ id: this.newId(), name: this.user.name || this.user.email, role: 'Admin', notes: '', duesPaid: false, charges: [] }],
+                  budgets: []
                 }
               },
               [`clubDirectory/${clubId}`]: { name: clubName },
@@ -1949,7 +2285,8 @@
           const q = this.searchQuery.trim().toLowerCase();
           const range = this.getTimelineRange();
           return this.transactions.filter(t => {
-            const matchesSearch = !q || (t.source + ' ' + (t.notes || '')).toLowerCase().includes(q);
+            const budgetTitle = t.budgetId ? this.getBudgetTitle(t.budgetId) : '';
+            const matchesSearch = !q || (t.source + ' ' + (t.notes || '') + ' ' + budgetTitle).toLowerCase().includes(q);
             const matchesCategory = this.categoryFilter === 'All' || (t.category || 'Other') === this.categoryFilter;
             const matchesRange = t.date >= range.start && t.date <= range.end;
             return matchesSearch && matchesCategory && matchesRange;
@@ -2070,11 +2407,13 @@
 
           if (mode === '1m') {
             const s = new Date(today); s.setMonth(s.getMonth() - 1);
-            return { start: fmt(s), end: fmt(fwd) };
+            const f = new Date(today); f.setMonth(f.getMonth() + 1);
+            return { start: fmt(s), end: fmt(f) };
           }
           if (mode === '3m') {
             const s = new Date(today); s.setMonth(s.getMonth() - 3);
-            return { start: fmt(s), end: fmt(fwd) };
+            const f = new Date(today); f.setMonth(f.getMonth() + 3);
+            return { start: fmt(s), end: fmt(f) };
           }
           if (mode === 'all') {
             const dates = this.transactions.map(t => t.date).sort();
@@ -2263,9 +2602,16 @@
         // Returns null when "today" falls outside the selected range — the caller
         // should skip drawing the today marker in that case.
         getTodayXPosition() {
+          return this.getDateXPosition(this.todayStr);
+        },
+
+        // Pixel X for an arbitrary date within the graph's own visible window, or
+        // null if that date isn't currently shown on the graph at all.
+        getDateXPosition(dateStr) {
+          if (!dateStr) return null;
           const dims = this.getChartDims();
           const days = this.getGraphWindowDays();
-          const idx = this.getTodayDayIndex();
+          const idx = days.indexOf(dateStr);
           if (idx === -1) return null;
           return dims.paddingLeft + (idx / (days.length - 1 || 1)) * dims.usableWidth;
         },
@@ -2413,6 +2759,24 @@
             svg += `<text x="${todayX}" y="${axisTop - 3}" fill="#22d3ee" font-size="8" font-weight="900" text-anchor="${labelAnchor}">TODAY</text>`;
           }
 
+          // The band of dates currently visible in the timeline's scroll viewport —
+          // a shaded region with an edge line at each end (the timeline shows a
+          // range at once, not a single date, so a single line understated it).
+          // Only drawn where the edges actually fall within the graph's own window.
+          let scrollStartX = this.getDateXPosition(this.timelineScrollRangeStart);
+          let scrollEndX = this.getDateXPosition(this.timelineScrollRangeEnd);
+          if (scrollStartX !== null || scrollEndX !== null) {
+            if (scrollStartX === null) scrollStartX = axisLeft;
+            if (scrollEndX === null) scrollEndX = axisRight;
+            const bandLeft = Math.min(scrollStartX, scrollEndX);
+            const bandRight = Math.max(scrollStartX, scrollEndX);
+            if (bandRight - bandLeft > 1) {
+              svg += `<rect x="${bandLeft}" y="${axisTop}" width="${bandRight - bandLeft}" height="${axisBottom - axisTop}" fill="#f0abfc" opacity="0.08" />`;
+            }
+            svg += `<line x1="${bandLeft}" y1="${axisTop}" x2="${bandLeft}" y2="${axisBottom}" stroke="#f0abfc" stroke-width="1.5" stroke-dasharray="2 2" opacity="0.85" />`;
+            svg += `<line x1="${bandRight}" y1="${axisTop}" x2="${bandRight}" y2="${axisBottom}" stroke="#f0abfc" stroke-width="1.5" stroke-dasharray="2 2" opacity="0.85" />`;
+          }
+
           svg += `</svg>`;
           return svg;
         },
@@ -2477,6 +2841,44 @@
             this.syncToFirebase();
             this.logActivity(`undid the deletion of "${tx.source}"`);
           });
+        },
+
+        openEditTransaction(item) {
+          this.editingTxn = { id: item.id, source: item.source, amount: Number(item.amount), type: item.type, category: item.category || 'Other', date: item.date, notes: item.notes || '' };
+          this.showEditTxn = true;
+        },
+
+        closeEditTransaction() {
+          this.showEditTxn = false;
+          this.editingTxn = null;
+        },
+
+        // Whether the transaction being edited is linked to another record
+        // (dues, a member charge, a budget expense/division) whose own amount
+        // won't move if the amount is changed here — shown as a heads-up, not a
+        // block, mirroring the non-blocking mismatch warning in the budget divide form.
+        editingTxnIsLinked() {
+          if (!this.editingTxn) return false;
+          const tx = this.transactions.find(t => t.id === this.editingTxn.id);
+          return !!(tx && (tx.duesFor || tx.memberChargeId || tx.budgetId));
+        },
+
+        saveEditTransaction() {
+          if (!this.can('officer') || !this.editingTxn) return;
+          const tx = this.transactions.find(t => t.id === this.editingTxn.id);
+          if (!tx) return;
+          if (!this.editingTxn.source || !this.editingTxn.amount || !this.editingTxn.date) return;
+          const oldSource = tx.source;
+          tx.source = this.editingTxn.source;
+          tx.amount = Math.abs(parseFloat(this.editingTxn.amount)) || 0;
+          tx.type = this.editingTxn.type;
+          tx.category = this.editingTxn.category || 'Other';
+          tx.date = this.editingTxn.date;
+          tx.notes = this.editingTxn.notes;
+          this.syncToFirebase();
+          this.logActivity(`edited the transaction "${oldSource}"`);
+          this.toast('Transaction updated', 'info');
+          this.closeEditTransaction();
         },
 
         toggleEditDues() {
@@ -2612,14 +3014,17 @@
         // both flips its state AND creates (or removes) the matching real
         // transaction in the main ledger — a competition fee the member paid shows
         // up as a deposit; a credit the club pays out shows up as a withdrawal.
-        toggleChargeSettled(chargeId) {
+        // memberId defaults to whichever member's ledger modal is currently open,
+        // but can be passed explicitly — needed when settling a division straight
+        // from the Budget Detail view, which has no open Member Ledger modal.
+        toggleChargeSettled(chargeId, memberId) {
           if (!this.can('officer')) return;
-          const member = this.getLedgerMember();
+          const member = memberId ? this.roster.find(m => m.id === memberId) : this.getLedgerMember();
           const charge = member && (member.charges || []).find(c => c.id === chargeId);
           if (!charge) return;
           charge.settled = !charge.settled;
           if (charge.settled) {
-            this.transactions.push({
+            const txn = {
               id: this.newId(),
               source: `${charge.label} — ${member.name}`,
               amount: Math.abs(charge.amount),
@@ -2628,7 +3033,10 @@
               date: this.todayStr,
               notes: charge.notes || '',
               memberChargeId: charge.id
-            });
+            };
+            if (charge.budgetId) txn.budgetId = charge.budgetId;
+            if (charge.expenseId) txn.expenseId = charge.expenseId;
+            this.transactions.push(txn);
           } else {
             this.transactions = this.transactions.filter(t => t.memberChargeId !== charge.id);
           }
@@ -2647,6 +3055,336 @@
           this.syncToFirebase();
           this.logActivity(`removed "${charge.label}" from ${member.name}'s ledger`);
           this.toast('Entry removed', 'info');
+        },
+
+        openBulkCharge() {
+          if (!this.can('officer')) return;
+          this.bulkChargeSelected = {};
+          this.bulkCharge = { label: '', amount: '', direction: 'owes', category: 'Other', notes: '' };
+          this.showBulkCharge = true;
+        },
+
+        toggleAllBulkSelected(checked) {
+          const next = {};
+          this.roster.forEach(m => { next[m.id] = checked; });
+          this.bulkChargeSelected = next;
+        },
+
+        bulkSelectedCount() {
+          return Object.values(this.bulkChargeSelected).filter(Boolean).length;
+        },
+
+        submitBulkCharge() {
+          if (!this.can('officer')) return;
+          const label = this.bulkCharge.label.trim();
+          const rawAmount = Math.abs(Number(this.bulkCharge.amount));
+          const memberIds = Object.keys(this.bulkChargeSelected).filter(id => this.bulkChargeSelected[id]);
+          if (!label || !rawAmount || memberIds.length === 0) return;
+          const signedAmount = this.bulkCharge.direction === 'owes' ? -rawAmount : rawAmount;
+          const groupId = this.newId();
+          memberIds.forEach(id => {
+            const member = this.roster.find(m => m.id === id);
+            if (!member) return;
+            if (!member.charges) member.charges = [];
+            member.charges.push({
+              id: this.newId(),
+              label,
+              amount: signedAmount,
+              category: this.bulkCharge.category || 'Other',
+              notes: this.bulkCharge.notes.trim(),
+              date: this.todayStr,
+              settled: false,
+              groupId
+            });
+          });
+          this.syncToFirebase();
+          this.logActivity(`added a ${this.bulkCharge.direction === 'owes' ? 'charge' : 'credit'} of $${rawAmount.toFixed(2)} for ${memberIds.length} member(s): ${label}`);
+          this.toast(`${label} added for ${memberIds.length} member${memberIds.length === 1 ? '' : 's'}`);
+          this.showBulkCharge = false;
+        },
+
+        // ---------- BUDGETS / EVENTS ----------
+        openBudgetsList() {
+          this.showBudgetsList = true;
+        },
+
+        sortedBudgets() {
+          return this.budgets.slice().sort((a, b) => a.eventDate < b.eventDate ? -1 : 1);
+        },
+
+        createBudget() {
+          if (!this.can('officer')) return;
+          const title = this.newBudget.title.trim();
+          if (!title || !this.newBudget.eventDate) return;
+          const budget = {
+            id: this.newId(),
+            title,
+            eventDate: this.newBudget.eventDate,
+            targetAmount: Number(this.newBudget.targetAmount) || 0,
+            createdAt: new Date().toISOString(),
+            mode: null,
+            expenses: [],
+            lumpDivisions: []
+          };
+          this.budgets.push(budget);
+          this.syncToFirebase();
+          this.logActivity(`created a budget for "${title}"`, title);
+          this.toast(`${title} created`);
+          this.newBudget = { title: '', eventDate: '', targetAmount: '' };
+          this.openBudgetDetail(budget.id);
+        },
+
+        getBudgetById(id) {
+          return this.budgets.find(b => b.id === id) || null;
+        },
+
+        getActiveBudget() {
+          return this.getBudgetById(this.activeBudgetId);
+        },
+
+        getBudgetTitle(budgetId) {
+          const b = this.getBudgetById(budgetId);
+          return b ? b.title : '';
+        },
+
+        openBudgetDetail(id) {
+          this.activeBudgetId = id;
+          this.divideContext = null;
+          this.showBudgetsList = false;
+          this.showBudgetDetail = true;
+        },
+
+        closeBudgetDetail() {
+          this.showBudgetDetail = false;
+          this.activeBudgetId = null;
+          this.divideContext = null;
+        },
+
+        addBudgetExpense() {
+          const budget = this.getActiveBudget();
+          if (!this.can('officer') || !budget) return;
+          const label = this.newBudgetExpense.label.trim();
+          const amount = Math.abs(Number(this.newBudgetExpense.amount));
+          if (!label || !amount || !this.newBudgetExpense.dueDate) return;
+          const expenseId = this.newId();
+          const txnId = this.newId();
+          const category = this.newBudgetExpense.category || 'Other';
+          budget.expenses.push({ id: expenseId, label, amount, dueDate: this.newBudgetExpense.dueDate, category, txnId, divisions: [] });
+          this.transactions.push({
+            id: txnId,
+            source: `${label} (${budget.title})`,
+            amount,
+            type: 'expense',
+            category,
+            date: this.newBudgetExpense.dueDate,
+            notes: '',
+            budgetId: budget.id,
+            expenseId
+          });
+          this.syncToFirebase();
+          this.logActivity(`added expense "${label}" ($${amount.toFixed(2)}) to ${budget.title}`, budget.title);
+          this.toast(`${label} added to ${budget.title}`);
+          this.newBudgetExpense = { label: '', amount: '', dueDate: '', category: 'Other' };
+        },
+
+        removeBudgetExpense(expenseId) {
+          const budget = this.getActiveBudget();
+          if (!this.can('officer') || !budget) return;
+          const expense = budget.expenses.find(e => e.id === expenseId);
+          if (!expense) return;
+          if (!confirm(`Remove "${expense.label}" and its ${(expense.divisions || []).length} member entries?`)) return;
+          (expense.divisions || []).forEach(div => this.resolveDivisionOnDelete(div));
+          this.transactions = this.transactions.filter(t => t.id !== expense.txnId);
+          budget.expenses = budget.expenses.filter(e => e.id !== expenseId);
+          this.syncToFirebase();
+          this.logActivity(`removed expense "${expense.label}" from ${budget.title}`, budget.title);
+          this.toast('Expense removed', 'info');
+        },
+
+        // ---- Divide flow: expenseId === null means dividing the whole budget (lump sum) ----
+        openDivideForm(expenseId) {
+          const budget = this.getActiveBudget();
+          if (!this.can('officer') || !budget) return;
+          this.divideContext = { expenseId: expenseId || null };
+          this.divideSelected = {};
+          this.divideAmounts = {};
+          this.divideDueDates = {};
+          const expense = expenseId ? budget.expenses.find(e => e.id === expenseId) : null;
+          const defaultDue = expense ? expense.dueDate : budget.eventDate;
+          this.roster.forEach(m => { this.divideDueDates[m.id] = defaultDue; });
+        },
+
+        closeDivideForm() {
+          this.divideContext = null;
+        },
+
+        getDivideTargetAmount() {
+          const budget = this.getActiveBudget();
+          if (!budget || !this.divideContext) return 0;
+          if (this.divideContext.expenseId) {
+            const expense = budget.expenses.find(e => e.id === this.divideContext.expenseId);
+            return expense ? Number(expense.amount) : 0;
+          }
+          const expenseSum = budget.expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+          return expenseSum || Number(budget.targetAmount) || 0;
+        },
+
+        toggleDivideSelected(memberId, checked) {
+          this.divideSelected[memberId] = checked;
+          this.recalcDivideAmounts();
+        },
+
+        recalcDivideAmounts() {
+          const ids = Object.keys(this.divideSelected).filter(id => this.divideSelected[id]);
+          if (ids.length === 0) return;
+          const target = this.getDivideTargetAmount();
+          const each = Math.round((target / ids.length) * 100) / 100;
+          ids.forEach(id => { this.divideAmounts[id] = each; });
+        },
+
+        getDivideSum() {
+          const ids = Object.keys(this.divideSelected).filter(id => this.divideSelected[id]);
+          return ids.reduce((sum, id) => sum + (Number(this.divideAmounts[id]) || 0), 0);
+        },
+
+        divideMismatch() {
+          if (!this.divideContext) return false;
+          return Math.abs(this.getDivideSum() - this.getDivideTargetAmount()) > 0.005;
+        },
+
+        saveDivision() {
+          const budget = this.getActiveBudget();
+          if (!this.can('officer') || !budget || !this.divideContext) return;
+          const ids = Object.keys(this.divideSelected).filter(id => this.divideSelected[id]);
+          if (ids.length === 0) return;
+          const expenseId = this.divideContext.expenseId;
+          const expense = expenseId ? budget.expenses.find(e => e.id === expenseId) : null;
+          if (expense && (expense.divisions || []).length > 0) return;
+          if (!expenseId && budget.mode === 'itemized') return;
+          if (expenseId && budget.mode === 'lumpsum') return;
+
+          const newDivisions = [];
+          ids.forEach(id => {
+            const member = this.roster.find(m => m.id === id);
+            const amount = Math.abs(Number(this.divideAmounts[id])) || 0;
+            if (!member || !amount) return;
+            const chargeId = this.newId();
+            if (!member.charges) member.charges = [];
+            member.charges.push({
+              id: chargeId,
+              label: expense ? `${expense.label} (${budget.title})` : budget.title,
+              amount: -amount,
+              category: expense ? expense.category : 'Other',
+              notes: '',
+              date: this.divideDueDates[id] || budget.eventDate,
+              settled: false,
+              budgetId: budget.id,
+              expenseId: expenseId || null
+            });
+            newDivisions.push({ id: this.newId(), memberId: id, amount, dueDate: this.divideDueDates[id] || budget.eventDate, chargeId });
+          });
+
+          if (expense) {
+            expense.divisions = newDivisions;
+            budget.mode = 'itemized';
+          } else {
+            budget.lumpDivisions = newDivisions;
+            budget.mode = 'lumpsum';
+          }
+
+          this.syncToFirebase();
+          this.logActivity(`divided ${expense ? '"' + expense.label + '"' : 'the budget'} for ${budget.title} among ${newDivisions.length} member(s)`, budget.title);
+          this.toast('Division saved');
+          this.divideContext = null;
+        },
+
+        isChargeSettled(div) {
+          const member = this.roster.find(m => m.id === div.memberId);
+          const charge = member ? (member.charges || []).find(c => c.id === div.chargeId) : null;
+          return !!(charge && charge.settled);
+        },
+
+        getBudgetProgress(budget) {
+          const actual = budget.expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+          let collected = 0, outstanding = 0;
+          this.roster.forEach(m => {
+            (m.charges || []).forEach(c => {
+              if (c.budgetId !== budget.id) return;
+              if (c.settled) collected += Math.abs(c.amount);
+              else outstanding += Math.abs(c.amount);
+            });
+          });
+          return { budgeted: Number(budget.targetAmount) || 0, actual, collected, outstanding };
+        },
+
+        resolveDivisionOnDelete(div) {
+          const member = this.roster.find(m => m.id === div.memberId);
+          if (!member) return;
+          const charge = (member.charges || []).find(c => c.id === div.chargeId);
+          if (!charge) return;
+          if (charge.settled) {
+            delete charge.budgetId;
+            delete charge.expenseId;
+          } else {
+            member.charges = member.charges.filter(c => c.id !== div.chargeId);
+          }
+        },
+
+        deleteBudget(id) {
+          if (!this.can('admin')) return;
+          const budget = this.getBudgetById(id);
+          if (!budget) return;
+          if (!confirm(`Delete the budget "${budget.title}"? Scheduled expenses and unpaid member charges tied to it will be removed; anything already paid stays as a regular transaction.`)) return;
+
+          budget.expenses.forEach(expense => {
+            const txn = this.transactions.find(t => t.id === expense.txnId);
+            if (txn) {
+              if (this.isUpcoming(txn.date)) {
+                this.transactions = this.transactions.filter(t => t.id !== txn.id);
+              } else {
+                delete txn.budgetId;
+                delete txn.expenseId;
+              }
+            }
+            (expense.divisions || []).forEach(div => this.resolveDivisionOnDelete(div));
+          });
+          (budget.lumpDivisions || []).forEach(div => this.resolveDivisionOnDelete(div));
+
+          this.budgets = this.budgets.filter(b => b.id !== id);
+          this.syncToFirebase();
+          this.logActivity(`deleted the budget "${budget.title}"`);
+          this.toast(`${budget.title} deleted`, 'info');
+          this.closeBudgetDetail();
+        },
+
+        async sendBudgetReminder(budget) {
+          const progress = this.getBudgetProgress(budget);
+          const lines = [
+            `${budget.title} — ${this.formatDate(budget.eventDate)}`,
+            `Budgeted: $${progress.budgeted.toFixed(2)} | Actual: $${progress.actual.toFixed(2)}`,
+            `Collected: $${progress.collected.toFixed(2)} | Outstanding: $${progress.outstanding.toFixed(2)}`,
+            ''
+          ];
+          const allDivisions = [];
+          budget.expenses.forEach(e => (e.divisions || []).forEach(d => allDivisions.push({ ...d, label: e.label })));
+          (budget.lumpDivisions || []).forEach(d => allDivisions.push({ ...d, label: budget.title }));
+          allDivisions.forEach(d => {
+            const member = this.roster.find(m => m.id === d.memberId);
+            const charge = member ? (member.charges || []).find(c => c.id === d.chargeId) : null;
+            const status = charge && charge.settled ? 'PAID' : 'DUE';
+            lines.push(`${member ? member.name : 'Unknown'}: $${Number(d.amount).toFixed(2)} (${d.label}) — ${status} ${this.formatDate(d.dueDate)}`);
+          });
+          const text = lines.join('\n');
+          if (navigator.share) {
+            try { await navigator.share({ title: budget.title, text }); } catch (err) { /* user cancelled — not an error */ }
+          } else {
+            try {
+              await navigator.clipboard.writeText(text);
+              this.toast('Summary copied to clipboard', 'info');
+            } catch (err) {
+              this.toast('Could not copy — try again', 'info');
+            }
+          }
         }
       }
     }
