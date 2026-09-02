@@ -395,22 +395,24 @@
           </div>
         </div>
 
-        <div class="hidden sm:flex bg-[color-mix(in_srgb,var(--cc-surface)_60%,transparent)] border border-[var(--cc-border)] rounded-xl p-2.5 shadow-lg items-center justify-between flex-wrap gap-y-2">
+        <div class="hidden sm:flex flex-col gap-2 bg-[color-mix(in_srgb,var(--cc-surface)_60%,transparent)] border border-[var(--cc-border)] rounded-xl p-2.5 shadow-lg">
           <span class="text-xs font-semibold text-[var(--cc-text-muted)]">Quick Actions</span>
-          <div class="flex gap-2 flex-wrap justify-end">
-            <button x-show="can('officer')" @click="openTxForm()" class="bg-[var(--cc-primary)] hover:brightness-110 text-white text-xs font-bold px-3 py-1 rounded-lg transition shadow-md">
+          <!-- A fixed grid (not flex-wrap) so a leftover item on the last row lands
+               under its own column instead of dangling alone off to one side. -->
+          <div class="grid grid-cols-3 gap-2">
+            <button x-show="can('officer')" @click="openTxForm()" class="bg-[var(--cc-primary)] hover:brightness-110 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition shadow-md">
               + Transaction
             </button>
-            <button x-show="can('officer')" @click="showMemberForm = !showMemberForm" class="bg-[var(--cc-accent)] hover:brightness-110 text-white text-xs font-bold px-3 py-1 rounded-lg transition shadow-md">
+            <button x-show="can('officer')" @click="showMemberForm = !showMemberForm" class="bg-[var(--cc-accent)] hover:brightness-110 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition shadow-md">
               + Member
             </button>
-            <button @click="openBudgetsList()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-3 py-1 rounded-lg transition shadow-md">
+            <button @click="openBudgetsList()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition shadow-md">
               📅 Budgets
             </button>
-            <button @click="showBreakdown = true" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-3 py-1 rounded-lg transition shadow-md">
+            <button @click="showBreakdown = true" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition shadow-md">
               📊 Breakdown
             </button>
-            <button @click="exportCsv()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-3 py-1 rounded-lg transition shadow-md">
+            <button @click="exportCsv()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition shadow-md">
               ⬇ Export
             </button>
           </div>
@@ -567,7 +569,7 @@
                        @dragleave="dragHoverKey = null"
                        @drop="handleDrop($event, 'deposit', row.date)">
                     <template x-for="item in row.deposits" :key="item.id">
-                      <div :draggable="can('officer')" @dragstart="handleDragStart($event, item)" @click="openEditTransaction(item)"
+                      <div :draggable="can('officer')" @dragstart="handleDragStart($event, item)" @dragend="handleDragEnd()" @click="openEditTransaction(item)"
                            class="draggable-item bg-[var(--cc-surface)] border p-2 rounded-lg flex items-center justify-between gap-2 shadow-md w-full sm:max-w-[280px] hover:shadow-xl hover:brightness-110 transition cursor-pointer"
                            :class="isUpcoming(item.date) ? 'border-[var(--cc-border)] bg-[color-mix(in_srgb,var(--cc-surface)_40%,transparent)] text-[var(--cc-text-muted)]' : 'border-emerald-900/60 text-emerald-300'">
                         <div class="min-w-0">
@@ -604,7 +606,7 @@
                        @dragleave="dragHoverKey = null"
                        @drop="handleDrop($event, 'expense', row.date)">
                     <template x-for="item in row.withdrawals" :key="item.id">
-                      <div :draggable="can('officer')" @dragstart="handleDragStart($event, item)" @click="openEditTransaction(item)"
+                      <div :draggable="can('officer')" @dragstart="handleDragStart($event, item)" @dragend="handleDragEnd()" @click="openEditTransaction(item)"
                            class="draggable-item bg-[var(--cc-surface)] border p-2 rounded-lg flex items-center justify-between gap-2 shadow-md w-full sm:max-w-[280px] hover:shadow-xl hover:brightness-110 transition cursor-pointer"
                            :class="isUpcoming(item.date) ? 'border-[var(--cc-border)] bg-[color-mix(in_srgb,var(--cc-surface)_40%,transparent)] text-[var(--cc-text-muted)]' : 'border-rose-900/60 text-rose-300'">
                         <div class="flex items-center gap-2 flex-none">
@@ -638,8 +640,11 @@
         </div>
       </div>
 
-      <!-- ROSTER PANEL (4 cols) -->
-      <div class="lg:col-span-4 bg-[color-mix(in_srgb,var(--cc-surface)_60%,transparent)] border border-[var(--cc-border)] rounded-xl p-3.5 shadow-lg flex flex-col min-h-[260px] lg:min-h-0 overflow-y-auto">
+      <!-- ROSTER PANEL (4 cols) — extra bottom padding on mobile so the last member
+           row can scroll clear of the fixed bottom action bar instead of hiding
+           behind it (this panel scrolls internally, so `main`'s own pb-20 doesn't
+           reach it). -->
+      <div class="lg:col-span-4 bg-[color-mix(in_srgb,var(--cc-surface)_60%,transparent)] border border-[var(--cc-border)] rounded-xl p-3.5 pb-20 sm:pb-3.5 shadow-lg flex flex-col min-h-[260px] lg:min-h-0 overflow-y-auto">
         <div class="flex justify-between items-center mb-1 flex-none gap-2">
           <h2 class="text-xs font-bold text-[var(--cc-text)] flex items-center gap-2">👥 Roster &amp; Dues</h2>
           <div class="flex items-center gap-2 flex-none">
@@ -1734,6 +1739,12 @@
         // timeline moves a region on the graph showing which range of dates is
         // currently in view (the timeline shows a range, not a single date).
         // rAF-throttled since scroll fires far more often than needed here.
+        //
+        // Measures each row's own bounding rect rather than hit-testing points with
+        // elementFromPoint — the hit-testing version was flaky (a probe point could
+        // land on inter-row spacing or a hover overlay and miss, silently returning
+        // null) which made the band on the graph shake and occasionally snap to
+        // cover the entire width whenever one edge failed to resolve.
         onTimelineScroll() {
           if (this._scrollSyncQueued) return;
           this._scrollSyncQueued = true;
@@ -1741,14 +1752,19 @@
             this._scrollSyncQueued = false;
             const container = this.$refs.timelineScroll;
             if (!container) return;
-            const rect = container.getBoundingClientRect();
-            const dateAt = (y) => {
-              const el = document.elementFromPoint(rect.left + rect.width / 2, y);
-              const rowEl = el ? el.closest('[data-row-date]') : null;
-              return rowEl ? rowEl.getAttribute('data-row-date') : null;
-            };
-            this.timelineScrollRangeStart = dateAt(rect.top + 10);
-            this.timelineScrollRangeEnd = dateAt(rect.bottom - 10);
+            const rows = container.querySelectorAll('[data-row-date]');
+            const containerRect = container.getBoundingClientRect();
+            let startDate = null, endDate = null;
+            rows.forEach(row => {
+              const r = row.getBoundingClientRect();
+              if (r.bottom >= containerRect.top && r.top <= containerRect.bottom) {
+                const d = row.getAttribute('data-row-date');
+                if (startDate === null) startDate = d;
+                endDate = d;
+              }
+            });
+            this.timelineScrollRangeStart = startDate;
+            this.timelineScrollRangeEnd = endDate;
           });
         },
 
@@ -2311,8 +2327,12 @@
           // something to a currently-empty day, or across the past/future divide,
           // both need a row to drop onto). Skip this for very long ranges ("All
           // Time" etc.) so the list doesn't balloon into hundreds of empty rows.
+          // Stacked mode normally hides empty days to stay dense, but while a drag
+          // is in flight it needs the same full set of drop targets as chronological
+          // mode — otherwise a stacked-view drag can only ever land on a date that
+          // already happens to have a transaction on it.
           const windowDays = this.getTimelineWindowDays();
-          const useEveryDay = this.timelineMode === 'chronological' && windowDays.length > 0 && windowDays.length <= 120;
+          const useEveryDay = (this.timelineMode === 'chronological' || this.draggedItem) && windowDays.length > 0 && windowDays.length <= 120;
           const allDates = new Set([...(useEveryDay ? windowDays : []), ...Object.keys(groups)]);
           const sortedDates = Array.from(allDates).sort();
 
@@ -2337,6 +2357,18 @@
           if (!this.can('officer')) return;
           this.draggedItem = item;
           event.dataTransfer.setData('text/plain', String(item.id));
+        },
+
+        // Fires whenever a drag ends, whether or not it was dropped on a valid
+        // target (dropped outside any row, cancelled with Escape, etc.) — without
+        // this, a cancelled drag left draggedItem set forever, since handleDrop
+        // only ever clears it on a successful drop. That stale value then kept
+        // stacked mode permanently expanded to show every day (the same signal
+        // that widens it during an active drag), making stacked and chronological
+        // views look identical/"broken" until the page was reloaded.
+        handleDragEnd() {
+          this.draggedItem = null;
+          this.dragHoverKey = null;
         },
 
         handleDrop(event, targetType, targetDate) {
@@ -2762,12 +2794,13 @@
           // The band of dates currently visible in the timeline's scroll viewport —
           // a shaded region with an edge line at each end (the timeline shows a
           // range at once, not a single date, so a single line understated it).
-          // Only drawn where the edges actually fall within the graph's own window.
-          let scrollStartX = this.getDateXPosition(this.timelineScrollRangeStart);
-          let scrollEndX = this.getDateXPosition(this.timelineScrollRangeEnd);
-          if (scrollStartX !== null || scrollEndX !== null) {
-            if (scrollStartX === null) scrollStartX = axisLeft;
-            if (scrollEndX === null) scrollEndX = axisRight;
+          // Both edges must resolve to a real, in-range date — guessing one edge
+          // from the other (e.g. falling back to the axis edge) previously made the
+          // band randomly balloon to cover the whole graph whenever only one edge
+          // was known, so it's skipped entirely rather than drawn with a guess.
+          const scrollStartX = this.getDateXPosition(this.timelineScrollRangeStart);
+          const scrollEndX = this.getDateXPosition(this.timelineScrollRangeEnd);
+          if (scrollStartX !== null && scrollEndX !== null) {
             const bandLeft = Math.min(scrollStartX, scrollEndX);
             const bandRight = Math.max(scrollStartX, scrollEndX);
             if (bandRight - bandLeft > 1) {
