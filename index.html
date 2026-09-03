@@ -694,18 +694,24 @@
                   <button x-show="can('admin')" @click.stop="removeMember(member.id)" class="text-slate-600 hover:text-rose-400 text-xs" aria-label="Remove from roster">✕</button>
                 </div>
               </div>
-              <div class="mt-1.5 flex items-center gap-2">
-                <span class="text-[9px] text-[var(--cc-text-muted)]">Position:</span>
-                <select x-show="can('admin')" x-model="member.role" @change="syncToFirebase()"
-                        class="bg-[var(--cc-surface)] border border-[var(--cc-border)] text-[9px] text-[var(--cc-text-muted)] rounded px-1.5 py-0.5 focus:outline-none focus:border-blue-500">
-                  <option value="Viewer">Viewer</option>
-                  <option value="Officer">Officer</option>
-                  <option value="Admin">Admin</option>
-                </select>
-                <span x-show="!can('admin')" class="text-[9px] font-bold px-1.5 py-0.5 rounded border"
-                      :class="member.role === 'Admin' ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : (member.role === 'Officer' ? 'text-blue-400 border-blue-500/30 bg-blue-500/10' : 'text-[var(--cc-text-muted)] border-[var(--cc-border)] bg-[var(--cc-chip)]/50')"
-                      x-text="member.role"></span>
-              </div>
+              <!-- Only shown once this roster entry is matched (by name) to a real
+                   login account — editing it here calls the same setMemberRole used
+                   under "Club Members (login access)", so there's one true role
+                   instead of a second, disconnected copy of it. -->
+              <template x-if="findLinkedClubMemberUid(member.name)">
+                <div class="mt-1.5 flex items-center gap-2">
+                  <span class="text-[9px] text-[var(--cc-text-muted)]">Position:</span>
+                  <select x-show="can('admin')" :value="clubMembers[findLinkedClubMemberUid(member.name)].role" @change="setMemberRole(findLinkedClubMemberUid(member.name), $event.target.value)" @click.stop
+                          class="bg-[var(--cc-surface)] border border-[var(--cc-border)] text-[9px] text-[var(--cc-text-muted)] rounded px-1.5 py-0.5 focus:outline-none focus:border-blue-500">
+                    <option value="viewer">Viewer</option>
+                    <option value="officer">Officer</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  <span x-show="!can('admin')" class="text-[9px] font-bold px-1.5 py-0.5 rounded border capitalize"
+                        :class="clubMembers[findLinkedClubMemberUid(member.name)].role === 'admin' ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : (clubMembers[findLinkedClubMemberUid(member.name)].role === 'officer' ? 'text-blue-400 border-blue-500/30 bg-blue-500/10' : 'text-[var(--cc-text-muted)] border-[var(--cc-border)] bg-[var(--cc-chip)]/50')"
+                        x-text="clubMembers[findLinkedClubMemberUid(member.name)].role"></span>
+                </div>
+              </template>
             </div>
           </template>
         </div>
@@ -896,18 +902,11 @@
             <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Full Name</label>
             <input type="text" placeholder="Full Name" x-model="newMember.name" class="w-full mt-1 bg-[var(--cc-bg)] text-sm text-[var(--cc-text)] border border-[var(--cc-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500" required>
           </div>
-          <div>
-            <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Position</label>
-            <select x-model="newMember.role" class="w-full mt-1 bg-[var(--cc-bg)] text-sm text-[var(--cc-text)] border border-[var(--cc-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500">
-              <option value="Viewer">Viewer</option>
-              <option value="Officer">Officer</option>
-              <option value="Admin">Admin</option>
-            </select>
-          </div>
-          <div>
+          <div class="sm:col-span-2">
             <label class="text-[10px] text-[var(--cc-text-muted)] font-bold uppercase tracking-wider">Notes <span class="text-slate-600 normal-case font-normal">(optional)</span></label>
             <input type="text" placeholder="Notes" x-model="newMember.notes" class="w-full mt-1 bg-[var(--cc-bg)] text-sm text-[var(--cc-text)] border border-[var(--cc-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500">
           </div>
+          <p class="sm:col-span-2 text-[10px] text-[var(--cc-text-muted)] bg-[var(--cc-chip)]/50 border border-[var(--cc-border)] rounded-lg px-2.5 py-1.5">This roster is just for dues &amp; ledger tracking — it doesn't grant app access. To let someone log in and set what they can do, add them under "Club Members (login access)" below once they've signed up.</p>
         </div>
 
         <div class="flex-none flex justify-end gap-2 pt-4 mt-4 border-t border-[var(--cc-border)]">
@@ -1512,7 +1511,7 @@
         todayStr: new Date().toISOString().split('T')[0],
 
         newTx: { source: '', amount: '', type: 'deposit', date: '', notes: '', category: 'Other', repeatMonthly: false, repeatCount: 3 },
-        newMember: { name: '', role: 'Viewer', notes: '' },
+        newMember: { name: '', notes: '' },
         searchQuery: '',
         categoryFilter: 'All',
 
@@ -2081,8 +2080,13 @@
               [`clubs/${clubId}/joinRequests/${uid}`]: null,
               [`users/${uid}/pendingRequests/${clubId}`]: null
             });
-            if (!this.roster.some(m => m.name === displayName)) {
-              this.roster.push({ id: this.newId(), name: displayName, role: 'Viewer', notes: '', duesPaid: false, charges: [] });
+            // Case-insensitive so an existing roster-only entry (e.g. "Sally", added
+            // before she ever logged in) gets recognized and linked instead of
+            // duplicated just because casing differs from what she typed at signup —
+            // matches the same comparison findLinkedClubMemberUid uses to link them.
+            const alreadyOnRoster = this.roster.some(m => m.name.trim().toLowerCase() === displayName.trim().toLowerCase());
+            if (!alreadyOnRoster) {
+              this.roster.push({ id: this.newId(), name: displayName, notes: '', duesPaid: false, charges: [] });
               this.syncToFirebase();
             }
             this.logActivity(`approved ${displayName} as Viewer`);
@@ -2109,6 +2113,20 @@
 
         adminCount() {
           return Object.values(this.clubMembers).filter(m => m.role === 'admin').length;
+        },
+
+        // Roster entries (dues/ledger tracking) aren't inherently tied to a real
+        // login account — a roster member might be a kid who never signs in, and a
+        // logged-in officer might not be on the dues roster at all. When a roster
+        // member's name does match a real club member (by name, case-insensitive),
+        // this finds that account's uid so the roster row can show/edit the SAME
+        // role stored under "Club Members (login access)" instead of a separate,
+        // disconnected field — changing it in either place changes the one real value.
+        findLinkedClubMemberUid(memberName) {
+          const target = (memberName || '').trim().toLowerCase();
+          if (!target) return null;
+          const match = Object.entries(this.clubMembers).find(([uid, m]) => (m.name || '').trim().toLowerCase() === target);
+          return match ? match[0] : null;
         },
 
         async setMemberRole(uid, role) {
@@ -2928,14 +2946,13 @@
           this.roster.push({
             id: this.newId(),
             name: this.newMember.name,
-            role: this.newMember.role,
             notes: this.newMember.notes,
             duesPaid: false,
             charges: []
           });
           this.syncToFirebase();
           const addedName = this.newMember.name;
-          this.newMember = { name: '', role: 'Viewer', notes: '' };
+          this.newMember = { name: '', notes: '' };
           this.showMemberForm = false;
           this.logActivity(`added ${addedName} to the roster`);
           this.toast(`${addedName} added to roster`);
